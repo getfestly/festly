@@ -63,6 +63,15 @@ export default function MeinBereichPage() {
             </Link>
           )}
           <Link
+            href="/mein-bereich/anfragen"
+            className="flex items-center justify-between w-full border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              {profile?.role === 'provider' ? 'Eingegangene Anfragen' : 'Meine Anfragen'}
+            </span>
+            <span className="text-gray-400">→</span>
+          </Link>
+          <Link
             href="/marktplatz"
             className="flex items-center justify-between w-full border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors"
           >
