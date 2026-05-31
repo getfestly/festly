@@ -10,13 +10,13 @@ export default function AngebotDetailPage() {
   const router = useRouter()
   const [listing, setListing] = useState(null)
   const [reviews, setReviews] = useState([])
-  const [currentUser, setCurrentUser] = useState(null) // null = unbekannt, false = nicht eingeloggt
+  const [currentUser, setCurrentUser] = useState(null) // null=laden, false=nicht eingeloggt
   const [userRole, setUserRole] = useState(null)
+  const [hasCompletedBooking, setHasCompletedBooking] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      // Listing + Anbieter-Name laden
       const { data: listing } = await supabase
         .from('listings')
         .select('*, profiles(display_name)')
@@ -27,23 +27,40 @@ export default function AngebotDetailPage() {
       if (!listing) { router.replace('/marktplatz'); return }
       setListing(listing)
 
-      // Bewertungen laden
-      const { data: reviews } = await supabase
-        .from('reviews')
-        .select('rating, comment, created_at, profiles(display_name)')
-        .eq('booking_id', id) // wird in Feature 5 korrekt verknüpft
-        .order('created_at', { ascending: false })
-      // Bewertungen sind an bookings geknüpft, nicht direkt an listings.
-      // Wird in Feature 5 korrekt geladen (separate Abfrage über bookings).
-      setReviews([]) // Platzhalter — Feature 5 füllt das
+      // Bewertungen über bookings laden (reviews.booking_id → bookings.listing_id)
+      const { data: bookingIds } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('listing_id', id)
+        .eq('status', 'completed')
 
-      // Eingeloggten Nutzer prüfen
+      if (bookingIds && bookingIds.length > 0) {
+        const ids = bookingIds.map((b) => b.id)
+        const { data: reviewData } = await supabase
+          .from('reviews')
+          .select('rating, comment, created_at, profiles(display_name)')
+          .in('booking_id', ids)
+          .order('created_at', { ascending: false })
+        setReviews(reviewData ?? [])
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUser(user)
         const { data: profile } = await supabase
           .from('profiles').select('role').eq('id', user.id).single()
         setUserRole(profile?.role ?? null)
+
+        if (profile?.role === 'customer') {
+          const { data: completed } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('listing_id', id)
+            .eq('customer_id', user.id)
+            .eq('status', 'completed')
+            .maybeSingle()
+          setHasCompletedBooking(!!completed)
+        }
       } else {
         setCurrentUser(false)
       }
@@ -65,6 +82,9 @@ export default function AngebotDetailPage() {
   const preis = (listing.price_cents / 100).toLocaleString('de-DE', {
     style: 'currency', currency: 'EUR',
   })
+  const avgRating = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8">
@@ -74,14 +94,9 @@ export default function AngebotDetailPage() {
         </Link>
 
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-6">
-          {/* Foto(s) */}
           {listing.photos?.length > 0 ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={listing.photos[0]}
-              alt={listing.title}
-              className="w-full h-56 object-cover"
-            />
+            <img src={listing.photos[0]} alt={listing.title} className="w-full h-56 object-cover" />
           ) : (
             <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-5xl text-gray-300">
               🎪
@@ -95,6 +110,12 @@ export default function AngebotDetailPage() {
                   {KATEGORIE_LABEL[listing.category] ?? listing.category}
                 </span>
                 <h1 className="text-2xl font-bold text-gray-900">{listing.title}</h1>
+                {avgRating && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-yellow-400 text-sm">★</span>
+                    <span className="text-sm text-gray-600">{avgRating} ({reviews.length} Bewertung{reviews.length !== 1 ? 'en' : ''})</span>
+                  </div>
+                )}
               </div>
               <p className="text-2xl font-bold text-gray-900 shrink-0">{preis}</p>
             </div>
@@ -117,10 +138,7 @@ export default function AngebotDetailPage() {
           {currentUser === false && (
             <div className="text-center">
               <p className="text-gray-500 mb-4">Melde dich an, um dieses Angebot anzufragen.</p>
-              <Link
-                href="/login"
-                className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors"
-              >
+              <Link href="/login" className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors">
                 Jetzt einloggen
               </Link>
             </div>
@@ -128,7 +146,7 @@ export default function AngebotDetailPage() {
           {currentUser && userRole === 'customer' && (
             <div className="text-center">
               <p className="text-gray-700 font-medium mb-1">Interesse an diesem Angebot?</p>
-              <p className="text-gray-400 text-sm mb-4">Stelle eine Buchungsanfrage — der Anbieter antwortet dir direkt.</p>
+              <p className="text-gray-400 text-sm mb-4">Der Anbieter antwortet dir direkt — noch keine Zahlung.</p>
               <Link
                 href={`/angebote/${id}/anfragen`}
                 className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors inline-block"
@@ -144,18 +162,37 @@ export default function AngebotDetailPage() {
           )}
         </div>
 
-        {/* Bewertungen — Feature 5 */}
+        {/* Bewertungen */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Bewertungen</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900">
+              Bewertungen {reviews.length > 0 && `(${reviews.length})`}
+            </h2>
+            {currentUser && userRole === 'customer' && (
+              <Link
+                href={`/angebote/${id}/bewerten`}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+              >
+                {hasCompletedBooking ? '+ Bewertung schreiben' : 'Bewertung hinterlassen'}
+              </Link>
+            )}
+          </div>
+
           {reviews.length === 0 ? (
             <p className="text-sm text-gray-400">Noch keine Bewertungen vorhanden.</p>
           ) : (
             <div className="space-y-4">
               {reviews.map((r, i) => (
-                <div key={i} className="border-b border-gray-50 pb-4 last:border-0">
+                <div key={i} className="pb-4 border-b border-gray-50 last:border-0 last:pb-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-yellow-400">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                    <span className="text-yellow-400 text-sm">
+                      {'★'.repeat(r.rating)}
+                      <span className="text-gray-200">{'★'.repeat(5 - r.rating)}</span>
+                    </span>
                     <span className="text-sm text-gray-500">{r.profiles?.display_name}</span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {new Date(r.created_at).toLocaleDateString('de-DE')}
+                    </span>
                   </div>
                   {r.comment && <p className="text-sm text-gray-600">{r.comment}</p>}
                 </div>
