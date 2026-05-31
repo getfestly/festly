@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { ADMIN_USER_ID } from '@/lib/admin'
 
 const ROLE_LABEL = { provider: 'Anbieter', customer: 'Kunde' }
 
@@ -10,6 +11,7 @@ export default function MeinBereichPage() {
   const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [email, setEmail] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -17,6 +19,7 @@ export default function MeinBereichPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
       setEmail(user.email)
+      setUserId(user.id)
       const { data } = await supabase
         .from('profiles').select('display_name, role').eq('id', user.id).single()
       setProfile(data)
@@ -79,6 +82,15 @@ export default function MeinBereichPage() {
             <span className="text-gray-400">→</span>
           </Link>
         </div>
+
+        {userId === ADMIN_USER_ID && (
+          <Link
+            href="/admin"
+            className="flex items-center justify-center w-full mb-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Admin-Bereich
+          </Link>
+        )}
 
         <button
           onClick={handleLogout}

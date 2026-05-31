@@ -106,6 +106,45 @@ create policy "Providers delete own listing photos"
 
 ---
 
+---
+
+## Admin-Bereich
+**Status:** ✅ Fertig
+
+**Dateien:**
+- `lib/admin.js` — `ADMIN_USER_ID` Konstante (importierbar in Server- und Client-Code)
+- `lib/supabase-server.js` — Server-seitiger Supabase-Client via `@supabase/ssr` (liest Session aus Request-Cookies)
+- `lib/supabase-admin.js` — Admin-Client mit Service-Role-Key (umgeht RLS vollständig; nur server-seitig!)
+- `app/admin/layout.js` — Server Component: prüft User-ID serverseitig, redirect → `/` bei Nicht-Admin
+- `app/admin/page.js` — Dashboard: Nutzeranzahl, Anbieter/Kunden, aktive Listings, Buchungen nach Status, Provision
+- `app/admin/nutzer/page.js` — Tabelle aller Profile, is_verified toggle via Server Action
+- `app/admin/listings/page.js` — Tabelle aller Listings (inkl. inaktiver), Deaktivieren via Server Action
+- `app/admin/buchungen/page.js` — Tabelle aller Buchungen (read-only)
+- `app/mein-bereich/page.js` — dezenter "Admin-Bereich"-Link, nur sichtbar für Admin-Nutzer
+
+**Manuell erforderlich:**
+
+🔧 **`SUPABASE_SERVICE_ROLE_KEY` in `.env.local` eintragen**
+- Supabase Dashboard → Settings → API → Abschnitt "Project API keys"
+- Den Wert `service_role` kopieren und in `.env.local` eintragen:
+  ```
+  SUPABASE_SERVICE_ROLE_KEY=dein-service-role-key
+  ```
+- Ohne diesen Key wirft der Admin-Bereich einen klaren Fehler mit Anleitung
+- **Achtung:** Service-Role-Key hat vollen Datenbankzugriff (RLS wird ignoriert) — niemals ins Frontend / Client-Code
+
+**Sicherheitsarchitektur:**
+- `app/admin/layout.js` ist ein Server Component — wird bei jedem Request serverseitig ausgeführt
+- Auth-Check via `@supabase/ssr` + `cookies()` aus `next/headers` — liest die Supabase-Session aus dem Request-Cookie
+- Kein Frontend-Redirect allein: Auch direkte URL-Aufrufe (z.B. `/admin/buchungen`) gehen durch den Layout-Guard
+- Mutationen (Toggle, Deaktivieren) laufen als Next.js Server Actions mit dem Service-Role-Client — kein API-Endpunkt nötig
+
+**Annahmen:**
+- ⚠️ Admin-User-ID ist eine Konstante in `lib/admin.js` (nicht in der DB gespeichert) — für mehrere Admins müsste man eine `is_admin`-Spalte in `profiles` einführen
+- ⚠️ Admin-Link in Mein-Bereich ist client-seitig ausgeblendet (Vergleich user.id mit ADMIN_USER_ID im Browser) — Sicherheit liegt im Server-Guard, nicht im UI-Hide
+
+---
+
 ## Nächste Schritte (für morgen)
 
 | Thema | Priorität |
