@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import Nav from '@/components/Nav'
 
 export default function BewertungPage() {
   const { id: listingId } = useParams()
@@ -33,7 +34,6 @@ export default function BewertungPage() {
       setUser(user)
       setListing(listing)
 
-      // Versuche, eine abgeschlossene Buchung zu finden
       const { data: booking } = await supabase
         .from('bookings')
         .select('id')
@@ -65,7 +65,6 @@ export default function BewertungPage() {
     })
 
     if (reviewError) {
-      // Unique-Constraint: Bewertung schon abgegeben
       if (reviewError.code === '23505') {
         setError('Du hast dieses Angebot bereits bewertet.')
       } else {
@@ -80,33 +79,42 @@ export default function BewertungPage() {
 
   if (!listing) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Laden …</p>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center h-48">
+          <p className="text-gray-400">Laden …</p>
+        </main>
+      </div>
     )
   }
 
   if (done) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center">
-          <p className="text-4xl mb-4">⭐</p>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Bewertung gespeichert!</h1>
-          <p className="text-gray-500 mb-6">Danke für dein Feedback.</p>
-          <Link
-            href={`/angebote/${listingId}`}
-            className="text-gray-900 font-medium underline"
-          >
-            Zurück zum Angebot
-          </Link>
-        </div>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center px-4 py-24">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+              ⭐
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Bewertung gespeichert!</h1>
+            <p className="text-gray-500 mb-6">Danke für dein Feedback.</p>
+            <Link
+              href={`/angebote/${listingId}`}
+              className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
+            >
+              Zurück zum Angebot
+            </Link>
+          </div>
+        </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-md mx-auto px-4 py-8">
         <Link href={`/angebote/${listingId}`} className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Angebot
         </Link>
@@ -122,8 +130,7 @@ export default function BewertungPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-          {/* Sternebewertung */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Bewertung *</label>
             <div className="flex gap-2">
@@ -151,7 +158,7 @@ export default function BewertungPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Kommentar <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <textarea
@@ -159,12 +166,12 @@ export default function BewertungPage() {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Wie war deine Erfahrung mit diesem Anbieter?"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>
+            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
           )}
 
           <button
@@ -174,7 +181,7 @@ export default function BewertungPage() {
             {loading ? 'Wird gespeichert …' : 'Bewertung abgeben'}
           </button>
         </form>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

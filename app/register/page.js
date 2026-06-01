@@ -28,7 +28,6 @@ export default function RegisterPage() {
     const user = data.user
     if (!user) { setError('Registrierung fehlgeschlagen.'); setLoading(false); return }
 
-    // Profil anlegen — funktioniert nur wenn Session aktiv (E-Mail-Bestätigung aus)
     const { error: profileError } = await supabase.from('profiles').insert({
       id: user.id,
       display_name: form.displayName,
@@ -37,7 +36,6 @@ export default function RegisterPage() {
 
     if (profileError) {
       if (!data.session) {
-        // Supabase wartet auf E-Mail-Bestätigung — Profil wird nach Login angelegt
         setEmailSent(true)
       } else {
         setError(profileError.message)
@@ -51,15 +49,17 @@ export default function RegisterPage() {
 
   if (emailSent) {
     return (
-      <main className="min-h-screen bg-white flex items-center justify-center px-4">
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-sm w-full text-center">
-          <p className="text-4xl mb-4">📬</p>
+          <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">📬</span>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">E-Mail bestätigen</h1>
           <p className="text-gray-500 mb-6">
             Wir haben dir einen Bestätigungslink geschickt. Nach der Bestätigung kannst du dich{' '}
             <Link href="/login" className="underline text-gray-900">einloggen</Link>.
           </p>
-          <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-3">
+          <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
             Entwicklertipp: In den Supabase-Einstellungen unter Authentication → Providers → Email
             kannst du &ldquo;Confirm email&rdquo; deaktivieren, damit das Profil sofort angelegt wird.
           </p>
@@ -69,7 +69,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center px-4">
+    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-sm w-full">
         <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 mb-8 block">
           ← Zurück zur Startseite
@@ -79,29 +79,29 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Anzeigename</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Anzeigename</label>
             <input
               type="text" required value={form.displayName} onChange={set('displayName')}
               placeholder="Dein Name oder Firmenname"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">E-Mail</label>
             <input
               type="email" required value={form.email} onChange={set('email')}
               placeholder="name@beispiel.de"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Passwort</label>
             <input
               type="password" required minLength={6} value={form.password} onChange={set('password')}
               placeholder="Mindestens 6 Zeichen"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -118,7 +118,7 @@ export default function RegisterPage() {
                   className={`py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
                     form.role === value
                       ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                 >
                   {label}
@@ -128,7 +128,7 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>
+            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
           )}
 
           <button

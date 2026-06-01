@@ -4,13 +4,14 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL } from '@/lib/constants'
+import Nav from '@/components/Nav'
 
 export default function AngebotDetailPage() {
   const { id } = useParams()
   const router = useRouter()
   const [listing, setListing] = useState(null)
   const [reviews, setReviews] = useState([])
-  const [currentUser, setCurrentUser] = useState(null) // null=laden, false=nicht eingeloggt
+  const [currentUser, setCurrentUser] = useState(null)
   const [userRole, setUserRole] = useState(null)
   const [hasCompletedBooking, setHasCompletedBooking] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -27,7 +28,6 @@ export default function AngebotDetailPage() {
       if (!listing) { router.replace('/marktplatz'); return }
       setListing(listing)
 
-      // Bewertungen über bookings laden (reviews.booking_id → bookings.listing_id)
       const { data: bookingIds } = await supabase
         .from('bookings')
         .select('id')
@@ -72,9 +72,12 @@ export default function AngebotDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Laden …</p>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center h-48">
+          <p className="text-gray-400">Laden …</p>
+        </main>
+      </div>
     )
   }
 
@@ -87,13 +90,14 @@ export default function AngebotDetailPage() {
     : null
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-2xl mx-auto px-4 py-8">
         <Link href="/marktplatz" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Marktplatz
         </Link>
 
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-5">
           {listing.photos?.length > 0 ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={listing.photos[0]} alt={listing.title} className="w-full h-56 object-cover" />
@@ -113,7 +117,9 @@ export default function AngebotDetailPage() {
                 {avgRating && (
                   <div className="flex items-center gap-1 mt-1">
                     <span className="text-yellow-400 text-sm">★</span>
-                    <span className="text-sm text-gray-600">{avgRating} ({reviews.length} Bewertung{reviews.length !== 1 ? 'en' : ''})</span>
+                    <span className="text-sm text-gray-600">
+                      {avgRating} ({reviews.length} Bewertung{reviews.length !== 1 ? 'en' : ''})
+                    </span>
                   </div>
                 )}
               </div>
@@ -124,7 +130,7 @@ export default function AngebotDetailPage() {
               <p className="text-gray-600 leading-relaxed mb-4">{listing.description}</p>
             )}
 
-            <div className="flex flex-wrap gap-4 text-sm text-gray-500 pb-4 border-b border-gray-100">
+            <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-4 border-t border-gray-100">
               <span>Anbieter: <span className="text-gray-900 font-medium">{anbieterName}</span></span>
               {listing.region && (
                 <span>Region: <span className="text-gray-900 font-medium">{listing.region}</span></span>
@@ -134,11 +140,14 @@ export default function AngebotDetailPage() {
         </div>
 
         {/* Anfragen-Bereich */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
           {currentUser === false && (
             <div className="text-center">
               <p className="text-gray-500 mb-4">Melde dich an, um dieses Angebot anzufragen.</p>
-              <Link href="/login" className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors">
+              <Link
+                href="/login"
+                className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors inline-block"
+              >
                 Jetzt einloggen
               </Link>
             </div>
@@ -146,7 +155,9 @@ export default function AngebotDetailPage() {
           {currentUser && userRole === 'customer' && (
             <div className="text-center">
               <p className="text-gray-700 font-medium mb-1">Interesse an diesem Angebot?</p>
-              <p className="text-gray-400 text-sm mb-4">Der Anbieter antwortet dir direkt — noch keine Zahlung.</p>
+              <p className="text-gray-400 text-sm mb-4">
+                Der Anbieter antwortet dir direkt — noch keine Zahlung.
+              </p>
               <Link
                 href={`/angebote/${id}/anfragen`}
                 className="bg-gray-900 text-white rounded-xl px-6 py-3 font-medium hover:bg-gray-700 transition-colors inline-block"
@@ -163,7 +174,7 @@ export default function AngebotDetailPage() {
         </div>
 
         {/* Bewertungen */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900">
               Bewertungen {reviews.length > 0 && `(${reviews.length})`}
@@ -183,7 +194,7 @@ export default function AngebotDetailPage() {
           ) : (
             <div className="space-y-4">
               {reviews.map((r, i) => (
-                <div key={i} className="pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+                <div key={i} className="pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-yellow-400 text-sm">
                       {'★'.repeat(r.rating)}
@@ -200,7 +211,7 @@ export default function AngebotDetailPage() {
             </div>
           )}
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

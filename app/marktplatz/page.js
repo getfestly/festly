@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
+import Nav from '@/components/Nav'
 
 const SORTIER_OPTIONEN = [
   { value: 'price_asc',  label: 'Preis aufsteigend' },
@@ -39,25 +40,17 @@ export default function MarktplatzPage() {
   useEffect(() => { fetchListings() }, [fetchListings])
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 block mb-1">← Startseite</Link>
-            <h1 className="text-2xl font-bold text-gray-900">Marktplatz</h1>
-          </div>
-          <Link href="/mein-bereich" className="text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl px-4 py-2">
-            Mein Bereich
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
 
         {/* Filter-Leiste */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-6 flex flex-wrap gap-3">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-3">
           <select
             value={kategorie}
             onChange={(e) => setKategorie(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Alle Kategorien</option>
             {KATEGORIEN.map((k) => (
@@ -70,13 +63,13 @@ export default function MarktplatzPage() {
             placeholder="Region suchen …"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 min-w-[160px]"
+            className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
           />
 
           <select
             value={sortierung}
             onChange={(e) => setSortierung(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 ml-auto"
+            className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ml-auto"
           >
             {SORTIER_OPTIONEN.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -91,11 +84,19 @@ export default function MarktplatzPage() {
           </div>
         ) : listings.length === 0 ? (
           <div className="text-center py-24">
-            <p className="text-gray-400 mb-2">Keine Angebote gefunden.</p>
+            <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+              🔍
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Keine Angebote gefunden</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              {(kategorie || region)
+                ? 'Probiere andere Filter oder setze sie zurück.'
+                : 'Aktuell gibt es noch keine Angebote auf dem Marktplatz.'}
+            </p>
             {(kategorie || region) && (
               <button
                 onClick={() => { setKategorie(''); setRegion('') }}
-                className="text-sm text-gray-600 underline"
+                className="text-sm bg-gray-900 text-white rounded-xl px-5 py-2.5 font-medium hover:bg-gray-700 transition-colors"
               >
                 Filter zurücksetzen
               </button>
@@ -107,9 +108,8 @@ export default function MarktplatzPage() {
               <Link
                 key={listing.id}
                 href={`/angebote/${listing.id}`}
-                className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group"
+                className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all group"
               >
-                {/* Bild oder Platzhalter */}
                 <div className="h-40 bg-gray-100 overflow-hidden">
                   {listing.photos?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -126,11 +126,9 @@ export default function MarktplatzPage() {
                 </div>
 
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5 shrink-0">
-                      {KATEGORIE_LABEL[listing.category] ?? listing.category}
-                    </span>
-                  </div>
+                  <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
+                    {KATEGORIE_LABEL[listing.category] ?? listing.category}
+                  </span>
                   <p className="font-semibold text-gray-900 leading-snug mt-2 line-clamp-2">
                     {listing.title}
                   </p>
@@ -158,7 +156,7 @@ export default function MarktplatzPage() {
             {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'} gefunden
           </p>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

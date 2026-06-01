@@ -4,12 +4,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL } from '@/lib/constants'
+import Nav from '@/components/Nav'
 
 export default function AnbieterListingsPage() {
   const router = useRouter()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -19,8 +19,6 @@ export default function AnbieterListingsPage() {
       const { data: profile } = await supabase
         .from('profiles').select('role').eq('id', user.id).single()
       if (profile?.role !== 'provider') { router.replace('/mein-bereich'); return }
-
-      setUserId(user.id)
 
       const { data } = await supabase
         .from('listings')
@@ -40,22 +38,21 @@ export default function AnbieterListingsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Laden …</p>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center h-48">
+          <p className="text-gray-400">Laden …</p>
+        </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <Link href="/mein-bereich" className="text-sm text-gray-400 hover:text-gray-600 block mb-1">
-              ← Mein Bereich
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Meine Angebote</h1>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-2xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Meine Angebote</h1>
           <Link
             href="/anbieter/listings/neu"
             className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
@@ -65,9 +62,18 @@ export default function AnbieterListingsPage() {
         </div>
 
         {listings.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-            <p className="text-gray-400 mb-4">Du hast noch keine Angebote.</p>
-            <Link href="/anbieter/listings/neu" className="text-gray-900 font-medium underline">
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+              🎪
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Noch keine Angebote</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Erstelle dein erstes Angebot und werde auf dem Marktplatz gefunden.
+            </p>
+            <Link
+              href="/anbieter/listings/neu"
+              className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
+            >
               Erstes Angebot erstellen
             </Link>
           </div>
@@ -76,8 +82,8 @@ export default function AnbieterListingsPage() {
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className={`bg-white rounded-2xl border p-5 flex items-start justify-between gap-4 transition-opacity ${
-                  listing.is_active ? 'border-gray-100' : 'border-gray-100 opacity-50'
+                className={`bg-white rounded-2xl border border-gray-200 p-5 flex items-start justify-between gap-4 transition-opacity ${
+                  listing.is_active ? '' : 'opacity-60'
                 }`}
               >
                 <div className="flex-1 min-w-0">
@@ -121,7 +127,7 @@ export default function AnbieterListingsPage() {
             ))}
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

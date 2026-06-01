@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN } from '@/lib/constants'
+import Nav from '@/components/Nav'
 
 export default function BearbeitenPage() {
   const router = useRouter()
@@ -87,63 +88,66 @@ export default function BearbeitenPage() {
 
   if (!form) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Laden …</p>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center h-48">
+          <p className="text-gray-400">Laden …</p>
+        </main>
+      </div>
     )
   }
 
+  const inputCls = 'w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-lg mx-auto px-4 py-8">
         <Link href="/anbieter/listings" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zu meinen Angeboten
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Angebot bearbeiten</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel *</label>
             <input
               type="text" required value={form.title} onChange={set('title')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className={inputCls}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Beschreibung</label>
             <textarea
               rows={4} value={form.description} onChange={set('description')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+              className={`${inputCls} resize-none`}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kategorie *</label>
-              <select
-                required value={form.category} onChange={set('category')}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorie *</label>
+              <select required value={form.category} onChange={set('category')} className={inputCls}>
                 {KATEGORIEN.map((k) => (
                   <option key={k.value} value={k.value}>{k.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Preis (€) *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Preis (€) *</label>
               <input
                 type="number" required min="1" step="0.01" value={form.priceEuro} onChange={set('priceEuro')}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className={inputCls}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
             <input
               type="text" value={form.region} onChange={set('region')}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className={inputCls}
             />
           </div>
 
@@ -153,14 +157,14 @@ export default function BearbeitenPage() {
               <div className="flex gap-2 flex-wrap">
                 {form.photos.map((url, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-100" />
+                  <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
                 ))}
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               {form.photos.length > 0 ? 'Weiteres Foto hinzufügen' : 'Foto (optional)'}
             </label>
             <input
@@ -171,7 +175,7 @@ export default function BearbeitenPage() {
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>
+            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
           )}
 
           <button
@@ -181,7 +185,7 @@ export default function BearbeitenPage() {
             {loading ? 'Wird gespeichert …' : 'Änderungen speichern'}
           </button>
         </form>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

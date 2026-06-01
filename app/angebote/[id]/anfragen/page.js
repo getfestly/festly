@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import Nav from '@/components/Nav'
 
 export default function AnfragenPage() {
   const { id: listingId } = useParams()
@@ -42,7 +43,6 @@ export default function AnfragenPage() {
     setError(null)
     setLoading(true)
 
-    // amount_cents = Preis des Listings; commission und payout berechnet DB-Trigger
     const { error: bookingError } = await supabase.from('bookings').insert({
       listing_id: listing.id,
       customer_id: user.id,
@@ -50,9 +50,8 @@ export default function AnfragenPage() {
       event_date: eventDate,
       status: 'pending',
       amount_cents: listing.price_cents,
-      // commission_cents und provider_payout_cents werden vom DB-Trigger gesetzt
-      commission_cents: 0,        // Platzhalter — Trigger überschreibt das
-      provider_payout_cents: 0,   // Platzhalter — Trigger überschreibt das
+      commission_cents: 0,
+      provider_payout_cents: 0,
     })
 
     if (bookingError) { setError(bookingError.message); setLoading(false); return }
@@ -61,9 +60,12 @@ export default function AnfragenPage() {
 
   if (!listing) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Laden …</p>
-      </main>
+      <div className="min-h-screen bg-gray-50">
+        <Nav />
+        <main className="flex items-center justify-center h-48">
+          <p className="text-gray-400">Laden …</p>
+        </main>
+      </div>
     )
   }
 
@@ -73,37 +75,38 @@ export default function AnfragenPage() {
   })
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <Nav />
+      <main className="max-w-md mx-auto px-4 py-8">
         <Link href={`/angebote/${listingId}`} className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Angebot
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Buchungsanfrage</h1>
         <p className="text-gray-500 mb-8">{listing.title}</p>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-          <div className="bg-gray-50 rounded-xl p-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <p className="text-sm text-gray-500 mb-1">Gesamtpreis</p>
             <p className="text-2xl font-bold text-gray-900">{preis}</p>
             <p className="text-xs text-gray-400 mt-1">
-              Inkl. 15 % Festly-Provision — Zahlung erst nach Annahme durch den Anbieter
+              Inkl. 15&nbsp;% Festly-Provision — Zahlung erst nach Annahme durch den Anbieter
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Wunschdatum *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Wunschdatum *</label>
             <input
               type="date"
               required
               min={today}
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm bg-red-50 rounded-xl px-4 py-3">{error}</p>
+            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
           )}
 
           <button
@@ -117,7 +120,7 @@ export default function AnfragenPage() {
             Du wirst noch nicht belastet — der Anbieter muss zuerst annehmen.
           </p>
         </form>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
