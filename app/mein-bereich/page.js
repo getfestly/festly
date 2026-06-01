@@ -29,11 +29,6 @@ export default function MeinBereichPage() {
     load()
   }, [router])
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -106,14 +101,6 @@ export default function MeinBereichPage() {
           )}
         </div>
 
-        <div className="pt-2">
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
-          >
-            Ausloggen
-          </button>
-        </div>
       </main>
     </div>
   )

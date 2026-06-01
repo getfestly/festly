@@ -82,11 +82,9 @@ export default function AnbieterListingsPage() {
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className={`bg-white rounded-2xl border border-gray-200 p-5 flex items-start justify-between gap-4 transition-opacity ${
-                  listing.is_active ? '' : 'opacity-60'
-                }`}
+                className="bg-white rounded-2xl border border-gray-200 p-5 flex items-start justify-between gap-4"
               >
-                <div className="flex-1 min-w-0">
+                <div className={`flex-1 min-w-0 ${!listing.is_active ? 'opacity-60' : ''}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
                       {KATEGORIE_LABEL[listing.category] ?? listing.category}

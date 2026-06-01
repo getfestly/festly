@@ -104,7 +104,13 @@ export default function AnfragenPage() {
           <div className="space-y-4">
             {bookings.map((booking) => {
               const s = STATUS_LABEL[booking.status] ?? STATUS_LABEL.pending
-              const preis = (booking.amount_cents / 100).toLocaleString('de-DE', {
+              const gesamtpreis = (booking.amount_cents / 100).toLocaleString('de-DE', {
+                style: 'currency', currency: 'EUR',
+              })
+              const auszahlungCents = booking.provider_payout_cents > 0
+                ? booking.provider_payout_cents
+                : Math.round(booking.amount_cents * 0.85)
+              const auszahlung = (auszahlungCents / 100).toLocaleString('de-DE', {
                 style: 'currency', currency: 'EUR',
               })
               const datum = new Date(booking.event_date).toLocaleDateString('de-DE', {
@@ -129,15 +135,23 @@ export default function AnfragenPage() {
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
-                    <span>Event: <span className="text-gray-900 font-medium">{datum}</span></span>
-                    <span>Gesamt: <span className="text-gray-900 font-medium">{preis}</span></span>
-                    {role === 'provider' && booking.provider_payout_cents > 0 && (
-                      <span>Auszahlung (85&nbsp;%): <span className="text-gray-900 font-medium">
-                        {(booking.provider_payout_cents / 100).toLocaleString('de-DE', {
-                          style: 'currency', currency: 'EUR',
-                        })}
-                      </span></span>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-500 mb-3">
+                      Event: <span className="text-gray-900 font-medium">{datum}</span>
+                    </p>
+                    {role === 'provider' ? (
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Deine Auszahlung</p>
+                        <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Buchungswert {gesamtpreis} abzgl. 15&nbsp;% Festly-Gebühr
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Gesamtpreis</p>
+                        <p className="text-xl font-bold text-gray-900">{gesamtpreis}</p>
+                      </div>
                     )}
                   </div>
 
