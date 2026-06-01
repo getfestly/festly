@@ -31,6 +31,7 @@ export default function AnfragenPage() {
   const [role, setRole] = useState(null)
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [confirmCancel, setConfirmCancel] = useState(null) // { bookingId, refundCents, amountCents }
 
   useEffect(() => {
     async function load() {
@@ -46,7 +47,7 @@ export default function AnfragenPage() {
         .from('bookings')
         .select(`
           id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
-          quantity, price_model, price_snapshot_cents, updated_at,
+          quantity, price_model, price_snapshot_cents, updated_at, cancellation_fee_cents,
           created_at,
           listings(title, category, price_unit_label),
           customer:profiles!bookings_customer_id_fkey(display_name),
@@ -61,12 +62,29 @@ export default function AnfragenPage() {
     load()
   }, [router])
 
+  // Anbieter: Annahme/Ablehnung über API (sendet auch E-Mail)
   async function handleStatus(bookingId, newStatus) {
-    const { error } = await supabase
-      .from('bookings').update({ status: newStatus }).eq('id', bookingId)
-    if (!error) {
+    const res = await fetch(`/api/bookings/${bookingId}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    const data = await res.json()
+    if (!data.error) {
       setBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
     }
+  }
+
+  async function handleCancel(bookingId) {
+    const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' })
+    const data = await res.json()
+    if (!data.error) {
+      setBookings((b) => b.map((x) => x.id === bookingId
+        ? { ...x, status: 'cancelled', cancellation_fee_cents: data.feeCents }
+        : x
+      ))
+    }
+    setConfirmCancel(null)
   }
 
   async function handleComplete(bookingId) {
@@ -235,19 +253,71 @@ export default function AnfragenPage() {
                     </Link>
                   )}
 
-                  {/* Kunde: Bezahlt-Badge */}
+                  {/* Kunde: Bezahlt-Badge + Stornieren-Option */}
                   {role === 'customer' && booking.status === 'paid' && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
-                        ✓ Bezahlt
-                      </span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
+                          ✓ Bezahlt
+                        </span>
+                      </div>
+                      {/* Storno-Bestätigungsblock */}
+                      {confirmCancel?.bookingId === booking.id ? (
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                          <p className="text-sm font-medium text-gray-900">Buchung wirklich stornieren?</p>
+                          <p className="text-sm text-gray-500">
+                            {confirmCancel.refundCents > 0
+                              ? `Du erhältst ${(confirmCancel.refundCents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} zurück (${Math.round(confirmCancel.refundCents / booking.amount_cents * 100)} %).`
+                              : 'Keine Rückerstattung (Event in weniger als 3 Tagen).'}
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCancel(booking.id)}
+                              className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-700 transition-colors"
+                            >
+                              Stornieren bestätigen
+                            </button>
+                            <button
+                              onClick={() => setConfirmCancel(null)}
+                              className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                              Abbrechen
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const daysUntil = Math.floor(
+                              (new Date(booking.event_date) - new Date()) / (1000 * 60 * 60 * 24)
+                            )
+                            let refundCents = 0
+                            if (daysUntil >= 30) refundCents = booking.amount_cents
+                            else if (daysUntil >= 14) refundCents = Math.round(booking.amount_cents * 0.5)
+                            else if (daysUntil >= 3)  refundCents = Math.round(booking.amount_cents * 0.25)
+                            setConfirmCancel({ bookingId: booking.id, refundCents })
+                          }}
+                          className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          Buchung stornieren
+                        </button>
+                      )}
                     </div>
+                  )}
+
+                  {/* Storno-Info wenn abgeschlossen storniert */}
+                  {role === 'customer' && booking.status === 'cancelled' && booking.cancellation_fee_cents != null && (
+                    <p className="text-xs text-gray-400">
+                      {booking.cancellation_fee_cents < booking.amount_cents && booking.amount_cents > 0
+                        ? `Rückerstattet: ${((booking.amount_cents - booking.cancellation_fee_cents) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`
+                        : 'Keine Rückerstattung'}
+                    </p>
                   )}
 
                   {/* Kunde: Anfrage zurückziehen (nur solange pending) */}
                   {role === 'customer' && booking.status === 'pending' && (
                     <button
-                      onClick={() => handleStatus(booking.id, 'cancelled')}
+                      onClick={() => handleCancel(booking.id)}
                       className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
                     >
                       Anfrage zurückziehen

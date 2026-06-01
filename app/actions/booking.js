@@ -1,14 +1,15 @@
 'use server'
 
 import { createSupabaseServer } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { sendNewBookingToProvider } from '@/lib/email'
 
-// Identische Logik wie im Frontend — serverseitig maßgeblich
 function calcAmountCents(priceModel, priceCents, quantity) {
   const qty = Math.max(1, parseInt(quantity) || 1)
   switch (priceModel) {
     case 'flat':       return priceCents
     case 'per_person': return qty * priceCents
-    case 'flat_plus':  return priceCents  // Grundpreis; qty ist informatorisch für den Anbieter
+    case 'flat_plus':  return priceCents
     case 'hourly':     return qty * priceCents
     case 'on_request': return 0
     default:           return priceCents
@@ -18,19 +19,16 @@ function calcAmountCents(priceModel, priceCents, quantity) {
 export async function submitBooking({ listingId, eventDate, quantity }) {
   const supabase = await createSupabaseServer()
 
-  // Session prüfen
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Nicht eingeloggt.' }
 
-  // Nur Kunden dürfen buchen
   const { data: profile } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
+    .from('profiles').select('role, display_name').eq('id', user.id).single()
   if (profile?.role !== 'customer') return { error: 'Nur Kunden können Buchungsanfragen stellen.' }
 
-  // Listing serverseitig laden — Client-Angaben zu Preis/Modell werden IGNORIERT
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, price_cents, price_model, provider_id, is_active')
+    .select('id, title, price_cents, price_model, provider_id, is_active')
     .eq('id', listingId)
     .eq('is_active', true)
     .single()
@@ -38,7 +36,6 @@ export async function submitBooking({ listingId, eventDate, quantity }) {
   if (!listing) return { error: 'Angebot nicht gefunden oder nicht mehr aktiv.' }
   if (listing.provider_id === user.id) return { error: 'Du kannst dein eigenes Angebot nicht anfragen.' }
 
-  // Serverseitige Neuberechnung — Schutz vor manipulierten Client-Werten
   const qty = Math.max(1, parseInt(quantity) || 1)
   const amount_cents = calcAmountCents(listing.price_model, listing.price_cents, qty)
 
@@ -52,10 +49,30 @@ export async function submitBooking({ listingId, eventDate, quantity }) {
     price_model:          listing.price_model ?? 'flat',
     price_snapshot_cents: listing.price_cents,
     amount_cents,
-    commission_cents:     0,     // DB-Trigger überschreibt
-    provider_payout_cents: 0,    // DB-Trigger überschreibt
+    commission_cents:     0,
+    provider_payout_cents: 0,
   })
 
   if (insertError) return { error: insertError.message }
+
+  // E-Mail an Anbieter (fire-and-forget)
+  try {
+    const admin = createAdminClient()
+    const [{ data: { user: providerUser } }, { data: providerProfile }] = await Promise.all([
+      admin.auth.admin.getUserById(listing.provider_id),
+      admin.from('profiles').select('display_name').eq('id', listing.provider_id).single(),
+    ])
+    await sendNewBookingToProvider({
+      to: providerUser?.email,
+      providerName: providerProfile?.display_name ?? 'Anbieter',
+      listingTitle: listing.title,
+      customerName: profile.display_name ?? user.email,
+      eventDate: new Date(eventDate).toLocaleDateString('de-DE', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      }),
+      amount_cents,
+    })
+  } catch (e) { console.error('[submitBooking email]', e) }
+
   return { error: null }
 }
