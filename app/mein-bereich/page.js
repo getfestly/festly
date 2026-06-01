@@ -14,6 +14,8 @@ export default function MeinBereichPage() {
   const [email, setEmail] = useState(null)
   const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [stripeLoading, setStripeLoading] = useState(false)
+  const [stripeError, setStripeError] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -22,12 +24,33 @@ export default function MeinBereichPage() {
       setEmail(user.email)
       setUserId(user.id)
       const { data } = await supabase
-        .from('profiles').select('display_name, role').eq('id', user.id).single()
+        .from('profiles')
+        .select('display_name, role, stripe_account_id, stripe_onboarding_complete')
+        .eq('id', user.id)
+        .single()
       setProfile(data)
       setLoading(false)
     }
     load()
   }, [router])
+
+  async function handleStripeOnboard() {
+    setStripeLoading(true)
+    setStripeError(null)
+    try {
+      const res = await fetch('/api/stripe/connect/onboard', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setStripeError(data.error ?? 'Fehler beim Starten des Onboardings.')
+        setStripeLoading(false)
+      }
+    } catch {
+      setStripeError('Netzwerkfehler. Bitte versuche es erneut.')
+      setStripeLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -46,6 +69,7 @@ export default function MeinBereichPage() {
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <main className="max-w-2xl mx-auto px-4 py-8">
+
         {/* Profil-Header */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center gap-4">
@@ -60,8 +84,43 @@ export default function MeinBereichPage() {
           </div>
         </div>
 
+        {/* Auszahlungskonto — nur für Anbieter */}
+        {profile?.role === 'provider' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <h2 className="font-semibold text-gray-900 mb-3">Auszahlungskonto</h2>
+
+            {profile.stripe_onboarding_complete ? (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
+                  ✓ Verifiziert
+                </span>
+                <span className="text-xs text-gray-400">Bankkonto über Stripe verbunden</span>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Verbinde dein Bankkonto über Stripe, um Auszahlungen für abgeschlossene Buchungen zu erhalten.
+                  Stripe führt die Identitätsverifizierung (KYC) durch — Festly speichert keine Bankdaten.
+                </p>
+                {stripeError && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 mb-3">
+                    {stripeError}
+                  </p>
+                )}
+                <button
+                  onClick={handleStripeOnboard}
+                  disabled={stripeLoading}
+                  className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                >
+                  {stripeLoading ? 'Weiterleitung …' : 'Bankkonto verbinden'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Schnellzugriff */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Link
             href="/mein-bereich/anfragen"
             className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"

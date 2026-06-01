@@ -72,7 +72,8 @@ create table profiles (
   legal_name    text,                    -- vollständiger Name oder Firma
   address       text,
   tax_id        text,                    -- Steuer-ID / USt-IdNr.
-  stripe_account_id text,                -- Stripe-Connect-Konto (KYC via Stripe)
+  stripe_account_id         text,              -- Stripe-Connect-Konto (KYC via Stripe)
+  stripe_onboarding_complete boolean default false, -- true wenn charges_enabled = true
   is_verified   boolean default false,   -- optionales "Verifiziert"-Badge
 
   created_at    timestamptz default now(),
