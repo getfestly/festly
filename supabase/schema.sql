@@ -25,6 +25,14 @@ create type listing_category as enum (
   'other'
 );
 
+create type pricing_model as enum (
+  'flat_day',            -- Tagespauschale
+  'per_person',          -- Preis pro Person
+  'base_plus_quantity',  -- Grundpreis + inkludierte Menge + Preis je Einheit
+  'hourly',              -- Stundensatz (opt. Grundpreis + inkl. Stunden)
+  'on_request'           -- Preis auf Anfrage
+);
+
 create type booking_status as enum (
   'pending',         -- Anfrage gesendet, Anbieter hat noch nicht reagiert
   'accepted',        -- Anbieter hat angenommen, Zahlung ausstehend
@@ -80,7 +88,13 @@ create table listings (
   title         text not null,
   description   text,
   category      listing_category not null,
-  price_cents   integer not null,        -- Preis in Cent (z.B. 25000 = 250,00 €)
+  price_cents             integer not null,   -- Fallback/Sortierfeld (aus Preismodell befüllt)
+  pricing_model           pricing_model,      -- Preismodell (nullable = altes flat_day)
+  base_price_cents        integer,            -- Grund-/Tagespreis
+  included_quantity       integer,            -- inkludierte Stunden/Menge
+  price_per_unit_cents    integer,            -- Preis je weitere Einheit/Person/Stunde
+  min_quantity            integer,            -- Mindestmenge/-personen
+  unit_label              text,               -- z.B. "Person", "Stück", "Stunde"
   region        text,                    -- Einsatzgebiet
   photos        text[] default '{}',     -- URLs aus Supabase Storage
   is_active     boolean default true,

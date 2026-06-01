@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL } from '@/lib/constants'
+import { formatPreis, formatPreisDetail } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
 export default function AngebotDetailPage() {
@@ -82,9 +83,8 @@ export default function AngebotDetailPage() {
   }
 
   const anbieterName = listing.profiles?.display_name ?? 'Unbekannt'
-  const preis = (listing.price_cents / 100).toLocaleString('de-DE', {
-    style: 'currency', currency: 'EUR',
-  })
+  const preis = formatPreis(listing)
+  const preisDetail = formatPreisDetail(listing)
   const avgRating = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null
@@ -123,7 +123,12 @@ export default function AngebotDetailPage() {
                   </div>
                 )}
               </div>
-              <p className="text-2xl font-bold text-gray-900 shrink-0">{preis}</p>
+              <div className="text-right shrink-0">
+                <p className="text-2xl font-bold text-gray-900">{preis}</p>
+                {preisDetail !== preis && (
+                  <p className="text-xs text-gray-400 mt-0.5">{preisDetail}</p>
+                )}
+              </div>
             </div>
 
             {listing.description && (

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
+import { formatPreis } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
 const SORTIER_OPTIONEN = [
@@ -22,7 +23,7 @@ export default function MarktplatzPage() {
     setLoading(true)
     let query = supabase
       .from('listings')
-      .select('id, title, description, category, price_cents, region, photos')
+      .select('id, title, description, category, price_cents, pricing_model, base_price_cents, price_per_unit_cents, included_quantity, unit_label, region, photos')
       .eq('is_active', true)
 
     if (kategorie) query = query.eq('category', kategorie)
@@ -136,11 +137,7 @@ export default function MarktplatzPage() {
                     <p className="text-sm text-gray-500 mt-1 line-clamp-2">{listing.description}</p>
                   )}
                   <div className="flex items-center justify-between mt-3">
-                    <p className="font-bold text-gray-900">
-                      {(listing.price_cents / 100).toLocaleString('de-DE', {
-                        style: 'currency', currency: 'EUR',
-                      })}
-                    </p>
+                    <p className="font-bold text-gray-900">{formatPreis(listing)}</p>
                     {listing.region && (
                       <span className="text-xs text-gray-400">{listing.region}</span>
                     )}
