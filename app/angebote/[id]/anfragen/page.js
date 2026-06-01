@@ -5,11 +5,39 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import Nav from '@/components/Nav'
 
+const eur = (cents) =>
+  (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+
+// Menge-Label je Preismodell
+function quantityLabel(listing) {
+  const unit = listing.price_unit_label
+  switch (listing.price_model) {
+    case 'per_person': return `Anzahl ${unit ?? 'Personen'} *`
+    case 'flat_plus':  return `Anzahl ${unit ?? 'Einheiten'} *`
+    case 'hourly':     return `Anzahl ${unit ?? 'Stunden'} *`
+    default:           return null
+  }
+}
+
+// Gesamtbetrag berechnen
+function calcAmountCents(listing, quantity) {
+  const qty = Math.max(1, parseInt(quantity) || 1)
+  switch (listing.price_model) {
+    case 'flat':       return listing.price_cents
+    case 'per_person': return qty * listing.price_cents
+    case 'flat_plus':  return listing.price_cents       // Grundpreis; Aufpreis vom Anbieter
+    case 'hourly':     return qty * listing.price_cents
+    case 'on_request': return 0
+    default:           return listing.price_cents
+  }
+}
+
 export default function AnfragenPage() {
   const { id: listingId } = useParams()
   const router = useRouter()
   const [listing, setListing] = useState(null)
   const [eventDate, setEventDate] = useState('')
+  const [quantity, setQuantity] = useState('1')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
@@ -25,7 +53,7 @@ export default function AnfragenPage() {
 
       const { data: listing } = await supabase
         .from('listings')
-        .select('id, title, price_cents, provider_id')
+        .select('id, title, price_cents, price_model, price_unit_label, provider_id')
         .eq('id', listingId)
         .eq('is_active', true)
         .single()
@@ -43,15 +71,21 @@ export default function AnfragenPage() {
     setError(null)
     setLoading(true)
 
+    const qty = Math.max(1, parseInt(quantity) || 1)
+    const amount_cents = calcAmountCents(listing, qty)
+
     const { error: bookingError } = await supabase.from('bookings').insert({
-      listing_id: listing.id,
-      customer_id: user.id,
-      provider_id: listing.provider_id,
-      event_date: eventDate,
-      status: 'pending',
-      amount_cents: listing.price_cents,
-      commission_cents: 0,
-      provider_payout_cents: 0,
+      listing_id:           listing.id,
+      customer_id:          user.id,
+      provider_id:          listing.provider_id,
+      event_date:           eventDate,
+      status:               'pending',
+      quantity:             qty,
+      price_model:          listing.price_model ?? 'flat',
+      price_snapshot_cents: listing.price_cents,
+      amount_cents,
+      commission_cents:     0,     // DB-Trigger überschreibt
+      provider_payout_cents: 0,    // DB-Trigger überschreibt
     })
 
     if (bookingError) { setError(bookingError.message); setLoading(false); return }
@@ -70,9 +104,10 @@ export default function AnfragenPage() {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const preis = (listing.price_cents / 100).toLocaleString('de-DE', {
-    style: 'currency', currency: 'EUR',
-  })
+  const needsQuantity = ['per_person', 'flat_plus', 'hourly'].includes(listing.price_model)
+  const qtyLabel = quantityLabel(listing)
+  const amountCents = calcAmountCents(listing, quantity)
+  const inputCls = 'w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -85,14 +120,54 @@ export default function AnfragenPage() {
         <p className="text-gray-500 mb-8">{listing.title}</p>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-sm text-gray-500 mb-1">Gesamtpreis</p>
-            <p className="text-2xl font-bold text-gray-900">{preis}</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Inkl. 15&nbsp;% Festly-Provision — Zahlung erst nach Annahme durch den Anbieter
-            </p>
-          </div>
 
+          {/* Preisvorschau */}
+          {listing.price_model === 'on_request' ? (
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-sm text-gray-500">
+                Preis auf Anfrage — der Anbieter nennt dir den Betrag nach der Anfrage.
+              </p>
+            </div>
+          ) : listing.price_model === 'flat_plus' ? (
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-sm text-gray-500 mb-1">Grundpreis</p>
+              <p className="text-2xl font-bold text-gray-900">{eur(listing.price_cents)}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Aufpreis für {listing.price_unit_label ?? 'zusätzliche Einheiten'} teilt dir der Anbieter mit.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-sm text-gray-500 mb-1">Gesamtpreis</p>
+              <p className="text-2xl font-bold text-gray-900">{eur(amountCents)}</p>
+              {needsQuantity && parseInt(quantity) > 1 && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {quantity}{' '}×{' '}{eur(listing.price_cents)}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">
+                Inkl. 15&nbsp;% Festly-Provision — Zahlung erst nach Annahme durch den Anbieter
+              </p>
+            </div>
+          )}
+
+          {/* Mengenfeld — nur für per_person, flat_plus, hourly */}
+          {needsQuantity && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{qtyLabel}</label>
+              <input
+                type="number"
+                required
+                min="1"
+                step="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+          )}
+
+          {/* Datum */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Wunschdatum *</label>
             <input
@@ -101,7 +176,7 @@ export default function AnfragenPage() {
               min={today}
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputCls}
             />
           </div>
 

@@ -14,6 +14,18 @@ const STATUS_LABEL = {
   cancelled: { label: 'Storniert',     bg: 'bg-gray-100',   text: 'text-gray-500'  },
 }
 
+// Menge leserlich darstellen, z.B. "3 Personen", "2 Stunden"
+function formatQuantity(booking) {
+  const qty = booking.quantity ?? 1
+  const unit = booking.listings?.price_unit_label
+  switch (booking.price_model) {
+    case 'per_person': return `${qty} ${unit ?? 'Person(en)'}`
+    case 'flat_plus':  return `${qty} ${unit ?? 'Einheit(en)'}`
+    case 'hourly':     return `${qty} ${unit ?? 'Stunde(n)'}`
+    default:           return null
+  }
+}
+
 export default function AnfragenPage() {
   const router = useRouter()
   const [role, setRole] = useState(null)
@@ -34,8 +46,9 @@ export default function AnfragenPage() {
         .from('bookings')
         .select(`
           id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
+          quantity, price_model, price_snapshot_cents,
           created_at,
-          listings(title, category),
+          listings(title, category, price_unit_label),
           customer:profiles!bookings_customer_id_fkey(display_name),
           provider:profiles!bookings_provider_id_fkey(display_name)
         `)
@@ -50,10 +63,7 @@ export default function AnfragenPage() {
 
   async function handleStatus(bookingId, newStatus) {
     const { error } = await supabase
-      .from('bookings')
-      .update({ status: newStatus })
-      .eq('id', bookingId)
-
+      .from('bookings').update({ status: newStatus }).eq('id', bookingId)
     if (!error) {
       setBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
     }
@@ -116,6 +126,7 @@ export default function AnfragenPage() {
               const datum = new Date(booking.event_date).toLocaleDateString('de-DE', {
                 day: '2-digit', month: 'long', year: 'numeric',
               })
+              const mengeText = formatQuantity(booking)
 
               return (
                 <div key={booking.id} className="bg-white rounded-2xl border border-gray-200 p-5">
@@ -129,6 +140,9 @@ export default function AnfragenPage() {
                           ? `Kunde: ${booking.customer?.display_name}`
                           : `Anbieter: ${booking.provider?.display_name}`}
                       </p>
+                      {mengeText && (
+                        <p className="text-sm text-gray-400 mt-0.5">{mengeText}</p>
+                      )}
                     </div>
                     <span className={`text-xs rounded-full px-2.5 py-1 font-medium shrink-0 ${s.bg} ${s.text}`}>
                       {s.label}
@@ -139,7 +153,10 @@ export default function AnfragenPage() {
                     <p className="text-sm text-gray-500 mb-3">
                       Event: <span className="text-gray-900 font-medium">{datum}</span>
                     </p>
-                    {role === 'provider' ? (
+
+                    {booking.price_model === 'on_request' ? (
+                      <p className="text-sm text-gray-400 italic">Preis auf Anfrage</p>
+                    ) : role === 'provider' ? (
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Deine Auszahlung</p>
                         <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
@@ -151,6 +168,11 @@ export default function AnfragenPage() {
                       <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Gesamtpreis</p>
                         <p className="text-xl font-bold text-gray-900">{gesamtpreis}</p>
+                        {booking.price_model === 'flat_plus' && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Grundpreis · Aufpreis für {mengeText ?? 'Einheiten'} folgt vom Anbieter
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
