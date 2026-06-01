@@ -57,19 +57,15 @@ export default function BewertungPage() {
     setError(null)
     setLoading(true)
 
-    const { error: reviewError } = await supabase.from('reviews').insert({
-      booking_id: bookingId,
-      reviewer_id: user.id,
-      rating,
-      comment: comment.trim() || null,
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId, rating, comment: comment.trim() || null }),
     })
 
-    if (reviewError) {
-      if (reviewError.code === '23505') {
-        setError('Du hast dieses Angebot bereits bewertet.')
-      } else {
-        setError(reviewError.message)
-      }
+    if (!res.ok) {
+      const body = await res.json()
+      setError(res.status === 409 ? 'Du hast dieses Angebot bereits bewertet.' : (body.error ?? 'Unbekannter Fehler'))
       setLoading(false)
       return
     }

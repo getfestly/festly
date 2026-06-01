@@ -14,6 +14,7 @@ export default function MeinBereichPage() {
   const [email, setEmail] = useState(null)
   const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [providerRating, setProviderRating] = useState(null) // { avg, count }
   const [stripeLoading, setStripeLoading] = useState(false)
   const [stripeError, setStripeError] = useState(null)
 
@@ -29,6 +30,22 @@ export default function MeinBereichPage() {
         .eq('id', user.id)
         .single()
       setProfile(data)
+
+      if (data?.role === 'provider') {
+        const { data: providerBookings } = await supabase
+          .from('bookings').select('id').eq('provider_id', user.id).eq('status', 'completed')
+        if (providerBookings?.length) {
+          const ids = providerBookings.map(b => b.id)
+          const { data: ratingRows } = await supabase
+            .from('reviews').select('rating').in('booking_id', ids)
+          const count = ratingRows?.length ?? 0
+          const avg = count
+            ? (ratingRows.reduce((s, r) => s + r.rating, 0) / count).toFixed(1)
+            : null
+          setProviderRating({ avg, count })
+        }
+      }
+
       setLoading(false)
     }
     load()
@@ -79,6 +96,14 @@ export default function MeinBereichPage() {
             <div className="min-w-0">
               <h1 className="text-xl font-bold text-gray-900 truncate">{profile?.display_name ?? '–'}</h1>
               <p className="text-gray-500 text-sm">{ROLE_LABEL[profile?.role] ?? profile?.role}</p>
+              {providerRating?.count > 0 && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-yellow-400 text-sm">★</span>
+                  <span className="text-sm text-gray-600">
+                    {providerRating.avg} ({providerRating.count} Bewertung{providerRating.count !== 1 ? 'en' : ''})
+                  </span>
+                </div>
+              )}
               <p className="text-gray-400 text-sm truncate">{email}</p>
             </div>
           </div>

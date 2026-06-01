@@ -33,6 +33,15 @@ export default function AnfragenPage() {
   const [loading, setLoading] = useState(true)
   const [confirmCancel, setConfirmCancel] = useState(null) // { bookingId, refundCents, amountCents }
 
+  // Review modal state
+  const [reviewModal, setReviewModal] = useState(null) // { bookingId, listingTitle }
+  const [reviewedIds, setReviewedIds] = useState(new Set())
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewHovered, setReviewHovered] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewError, setReviewError] = useState(null)
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -57,10 +66,58 @@ export default function AnfragenPage() {
         .order('created_at', { ascending: false })
 
       setBookings(data ?? [])
+
+      if (profile?.role === 'customer') {
+        const completedIds = (data ?? [])
+          .filter(b => b.status === 'completed')
+          .map(b => b.id)
+        if (completedIds.length > 0) {
+          const { data: existing } = await supabase
+            .from('reviews')
+            .select('booking_id')
+            .in('booking_id', completedIds)
+          setReviewedIds(new Set(existing?.map(r => r.booking_id) ?? []))
+        }
+      }
+
       setLoading(false)
     }
     load()
   }, [router])
+
+  function openReview(booking) {
+    setReviewModal({ bookingId: booking.id, listingTitle: booking.listings?.title ?? '' })
+    setReviewRating(0)
+    setReviewHovered(0)
+    setReviewComment('')
+    setReviewError(null)
+  }
+
+  async function submitReview() {
+    if (reviewRating === 0) { setReviewError('Bitte wähle eine Sternebewertung.'); return }
+    setReviewLoading(true)
+    setReviewError(null)
+
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: reviewModal.bookingId,
+        rating: reviewRating,
+        comment: reviewComment,
+      }),
+    })
+
+    setReviewLoading(false)
+    if (!res.ok) {
+      const body = await res.json()
+      setReviewError(body.error ?? 'Unbekannter Fehler')
+      return
+    }
+
+    setReviewedIds(prev => new Set([...prev, reviewModal.bookingId]))
+    setReviewModal(null)
+  }
 
   // Anbieter: Annahme/Ablehnung über API (sendet auch E-Mail)
   async function handleStatus(bookingId, newStatus) {
@@ -323,12 +380,88 @@ export default function AnfragenPage() {
                       Anfrage zurückziehen
                     </button>
                   )}
+
+                  {/* Kunde: Bewertung abgeben nach Abschluss */}
+                  {role === 'customer' && booking.status === 'completed' && (
+                    reviewedIds.has(booking.id) ? (
+                      <p className="text-xs text-gray-400 text-center py-1">Bewertung abgegeben ✓</p>
+                    ) : (
+                      <button
+                        onClick={() => openReview(booking)}
+                        className="w-full border border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Bewertung hinterlassen
+                      </button>
+                    )
+                  )}
                 </div>
               )
             })}
           </div>
         )}
       </main>
+
+      {/* Bewertungs-Modal */}
+      {reviewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Bewertung abgeben</h2>
+            <p className="text-sm text-gray-500 mb-5">{reviewModal.listingTitle}</p>
+
+            <div className="flex gap-1 mb-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star} type="button"
+                  onMouseEnter={() => setReviewHovered(star)}
+                  onMouseLeave={() => setReviewHovered(0)}
+                  onClick={() => setReviewRating(star)}
+                  className="text-3xl transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`${star} Stern${star > 1 ? 'e' : ''}`}
+                >
+                  <span className={(reviewHovered || reviewRating) >= star ? 'text-yellow-400' : 'text-gray-200'}>
+                    ★
+                  </span>
+                </button>
+              ))}
+            </div>
+            {reviewRating > 0 && (
+              <p className="text-xs text-gray-400 mb-4">
+                {['', 'Sehr schlecht', 'Schlecht', 'Ok', 'Gut', 'Sehr gut'][reviewRating]}
+              </p>
+            )}
+
+            <textarea
+              rows={3}
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Kommentar (optional)"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mb-4"
+            />
+
+            {reviewError && (
+              <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                {reviewError}
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={submitReview}
+                disabled={reviewLoading || reviewRating === 0}
+                className="flex-1 bg-gray-900 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+              >
+                {reviewLoading ? 'Wird gespeichert …' : 'Abgeben'}
+              </button>
+              <button
+                onClick={() => setReviewModal(null)}
+                className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
