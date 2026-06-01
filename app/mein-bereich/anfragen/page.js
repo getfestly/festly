@@ -46,7 +46,7 @@ export default function AnfragenPage() {
         .from('bookings')
         .select(`
           id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
-          quantity, price_model, price_snapshot_cents,
+          quantity, price_model, price_snapshot_cents, updated_at,
           created_at,
           listings(title, category, price_unit_label),
           customer:profiles!bookings_customer_id_fkey(display_name),
@@ -66,6 +66,17 @@ export default function AnfragenPage() {
       .from('bookings').update({ status: newStatus }).eq('id', bookingId)
     if (!error) {
       setBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
+    }
+  }
+
+  async function handleComplete(bookingId) {
+    const res = await fetch(`/api/bookings/${bookingId}/complete`, { method: 'POST' })
+    const data = await res.json()
+    if (!data.error) {
+      setBookings((b) => b.map((x) => x.id === bookingId
+        ? { ...x, status: 'completed', updated_at: new Date().toISOString() }
+        : x
+      ))
     }
   }
 
@@ -158,11 +169,21 @@ export default function AnfragenPage() {
                       <p className="text-sm text-gray-400 italic">Preis auf Anfrage</p>
                     ) : role === 'provider' ? (
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Deine Auszahlung</p>
-                        <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Buchungswert {gesamtpreis}{' '}abzgl. 15&nbsp;% Festly-Gebühr
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">
+                          {booking.status === 'completed' ? 'Ausgezahlt' : 'Deine Auszahlung'}
                         </p>
+                        <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
+                        {booking.status === 'completed' ? (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Ausgezahlt am {new Date(booking.updated_at).toLocaleDateString('de-DE', {
+                              day: '2-digit', month: 'long', year: 'numeric',
+                            })}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Buchungswert {gesamtpreis}{' '}abzgl. 15&nbsp;% Festly-Gebühr
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -192,6 +213,16 @@ export default function AnfragenPage() {
                         Ablehnen
                       </button>
                     </div>
+                  )}
+
+                  {/* Kunde: Zahlung freigeben (Event vorbei, Status bezahlt) */}
+                  {role === 'customer' && booking.status === 'paid' && booking.event_date < new Date().toISOString().split('T')[0] && (
+                    <button
+                      onClick={() => handleComplete(booking.id)}
+                      className="w-full bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                    >
+                      Event war super – Zahlung freigeben
+                    </button>
                   )}
 
                   {/* Kunde: Jetzt bezahlen (wenn Anbieter angenommen hat) */}
