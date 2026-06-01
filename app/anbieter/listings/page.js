@@ -106,7 +106,7 @@ export default function AnbieterListingsPage() {
                 <div className="flex gap-2 shrink-0">
                   <Link
                     href={`/anbieter/listings/${listing.id}/bearbeiten`}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                    className="text-sm text-gray-700 font-medium border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                   >
                     Bearbeiten
                   </Link>

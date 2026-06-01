@@ -144,7 +144,7 @@ export default function AnfragenPage() {
                         <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Deine Auszahlung</p>
                         <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Buchungswert {gesamtpreis} abzgl. 15&nbsp;% Festly-Gebühr
+                          Buchungswert {gesamtpreis}{' '}abzgl. 15&nbsp;% Festly-Gebühr
                         </p>
                       </div>
                     ) : (
