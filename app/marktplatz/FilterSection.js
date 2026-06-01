@@ -6,10 +6,18 @@ import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
 import { formatPreis } from '@/lib/pricing'
 
 const SORTIER_OPTIONEN = [
+  { value: 'newest',     label: 'Neueste zuerst' },
+  { value: 'neu_14',     label: 'Neu auf Festly' },
   { value: 'price_asc',  label: 'Preis aufsteigend' },
   { value: 'price_desc', label: 'Preis absteigend' },
-  { value: 'newest',     label: 'Neueste zuerst' },
 ]
+
+const NEU_MS = 14 * 24 * 60 * 60 * 1000
+
+function isNeu(listing) {
+  return listing.created_at &&
+    Date.now() - new Date(listing.created_at).getTime() < NEU_MS
+}
 
 export default function FilterSection() {
   const [listings, setListings] = useState([])
@@ -22,7 +30,7 @@ export default function FilterSection() {
     setLoading(true)
     let query = supabase
       .from('listings')
-      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos')
+      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos, created_at')
       .eq('is_active', true)
 
     if (kategorie) query = query.eq('category', kategorie)
@@ -31,6 +39,10 @@ export default function FilterSection() {
     if (sortierung === 'price_asc')  query = query.order('price_cents', { ascending: true })
     if (sortierung === 'price_desc') query = query.order('price_cents', { ascending: false })
     if (sortierung === 'newest')     query = query.order('created_at',  { ascending: false })
+    if (sortierung === 'neu_14') {
+      const cutoff = new Date(Date.now() - NEU_MS).toISOString()
+      query = query.gte('created_at', cutoff).order('created_at', { ascending: false })
+    }
 
     const { data } = await query
     setListings(data ?? [])
@@ -92,13 +104,13 @@ export default function FilterSection() {
           </div>
           <h3 className="font-semibold text-gray-900 mb-2">Keine Angebote gefunden</h3>
           <p className="text-gray-500 text-sm mb-6">
-            {(kategorie || region)
+            {(kategorie || region || sortierung === 'neu_14')
               ? 'Probiere andere Filter oder setze sie zurück.'
               : 'Aktuell gibt es noch keine Angebote auf dem Marktplatz.'}
           </p>
-          {(kategorie || region) && (
+          {(kategorie || region || sortierung === 'neu_14') && (
             <button
-              onClick={() => { setKategorie(''); setRegion('') }}
+              onClick={() => { setKategorie(''); setRegion(''); setSortierung('newest') }}
               className="text-sm bg-gray-900 text-white rounded-xl px-5 py-2.5 font-medium hover:bg-gray-700 transition-colors"
             >
               Filter zurücksetzen
@@ -113,7 +125,7 @@ export default function FilterSection() {
               href={`/angebote/${listing.id}`}
               className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all group"
             >
-              <div className="h-40 bg-gray-100 overflow-hidden">
+              <div className="relative h-40 bg-gray-100 overflow-hidden">
                 {listing.photos?.[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -125,6 +137,11 @@ export default function FilterSection() {
                   <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
                     🎪
                   </div>
+                )}
+                {isNeu(listing) && (
+                  <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                    Neu
+                  </span>
                 )}
               </div>
               <div className="p-4">
