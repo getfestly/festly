@@ -1,5 +1,6 @@
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { ADMIN_USER_ID } from '@/lib/admin'
 import Nav from '@/components/Nav'
 import Link from 'next/link'
 import { KATEGORIE_LABEL } from '@/lib/constants'
@@ -11,6 +12,17 @@ const FIELDS = 'id, title, description, category, price_cents, price_model, pric
 async function fetchHighlights() {
   const supabase = await createSupabaseServer()
   const admin = createAdminClient()
+
+  // Eingeloggter Nutzer + Rolle
+  const { data: { user } } = await supabase.auth.getUser()
+  let userRole = null
+  let userId = null
+  if (user) {
+    userId = user.id
+    const { data: profile } = await supabase
+      .from('profiles').select('role').eq('id', user.id).single()
+    userRole = profile?.role ?? null
+  }
 
   // Sektion 1: Neu auf Festly
   const { data: neueListings } = await supabase
@@ -77,7 +89,33 @@ async function fetchHighlights() {
     neueListings: neueListings ?? [],
     oftGebucht,
     topBewertet,
+    userRole,
+    userId,
   }
+}
+
+function QuickActions({ role, isAdmin }) {
+  if (!role) return null
+
+  const btn = 'flex items-center gap-2 bg-purple-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-purple-700 active:bg-purple-800 transition-colors whitespace-nowrap'
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-3 mb-8">
+      {isAdmin ? (
+        <>
+          <Link href="/admin"                   className={btn}>⚙️ Admin-Bereich</Link>
+          <Link href="/mein-bereich/anfragen"   className={btn}>📋 Anfragen</Link>
+        </>
+      ) : role === 'provider' ? (
+        <>
+          <Link href="/anbieter/listings/neu"   className={btn}>➕ Angebot erstellen</Link>
+          <Link href="/mein-bereich/anfragen"   className={btn}>📋 Meine Anfragen</Link>
+        </>
+      ) : (
+        <Link href="/mein-bereich/anfragen"     className={btn}>📋 Meine Anfragen</Link>
+      )}
+    </div>
+  )
 }
 
 function HighlightCard({ listing, border }) {
@@ -127,15 +165,18 @@ function HighlightSection({ title, listings, border }) {
 }
 
 export default async function MarktplatzPage() {
-  const { neueListings, oftGebucht, topBewertet } = await fetchHighlights()
+  const { neueListings, oftGebucht, topBewertet, userRole, userId } = await fetchHighlights()
 
   const hasHighlights = neueListings.length > 0 || oftGebucht.length > 0 || topBewertet.length > 0
+  const isAdmin = userId === ADMIN_USER_ID
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
+
+        <QuickActions role={userRole} isAdmin={isAdmin} />
 
         {neueListings.length > 0 && (
           <HighlightSection title="✨ Neu auf Festly"  listings={neueListings} border="border-blue-300" />
