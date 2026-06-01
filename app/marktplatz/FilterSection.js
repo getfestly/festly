@@ -6,10 +6,11 @@ import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
 import { formatPreis } from '@/lib/pricing'
 
 const SORTIER_OPTIONEN = [
-  { value: 'newest',     label: 'Neueste zuerst' },
-  { value: 'neu_14',     label: 'Neu auf Festly' },
-  { value: 'price_asc',  label: 'Preis aufsteigend' },
-  { value: 'price_desc', label: 'Preis absteigend' },
+  { value: 'newest',           label: 'Neueste zuerst' },
+  { value: 'neu_14',           label: 'Neu auf Festly' },
+  { value: 'schnellste_antwort', label: 'Schnellste Antwort' },
+  { value: 'price_asc',        label: 'Preis aufsteigend' },
+  { value: 'price_desc',       label: 'Preis absteigend' },
 ]
 
 const NEU_MS = 14 * 24 * 60 * 60 * 1000
@@ -19,7 +20,15 @@ function isNeu(listing) {
     Date.now() - new Date(listing.created_at).getTime() < NEU_MS
 }
 
-export default function FilterSection() {
+function getBorderClass(listing, borderByListing) {
+  const b = borderByListing[listing.id]
+  if (b === 'gold')   return 'border-2 border-yellow-400 hover:border-yellow-500'
+  if (b === 'orange') return 'border-2 border-orange-300 hover:border-orange-400'
+  if (isNeu(listing)) return 'border-2 border-blue-300  hover:border-blue-400'
+  return 'border border-gray-200 hover:border-gray-300'
+}
+
+export default function FilterSection({ borderByListing = {}, responseByProvider = {} }) {
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
   const [kategorie, setKategorie] = useState('')
@@ -30,24 +39,35 @@ export default function FilterSection() {
     setLoading(true)
     let query = supabase
       .from('listings')
-      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos, created_at')
+      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos, created_at, provider_id')
       .eq('is_active', true)
 
     if (kategorie) query = query.eq('category', kategorie)
     if (region)    query = query.ilike('region', `%${region}%`)
 
-    if (sortierung === 'price_asc')  query = query.order('price_cents', { ascending: true })
-    if (sortierung === 'price_desc') query = query.order('price_cents', { ascending: false })
-    if (sortierung === 'newest')     query = query.order('created_at',  { ascending: false })
+    if (sortierung === 'price_asc')          query = query.order('price_cents', { ascending: true })
+    if (sortierung === 'price_desc')         query = query.order('price_cents', { ascending: false })
+    if (sortierung === 'newest')             query = query.order('created_at',  { ascending: false })
+    if (sortierung === 'schnellste_antwort') query = query.order('created_at',  { ascending: false })
     if (sortierung === 'neu_14') {
       const cutoff = new Date(Date.now() - NEU_MS).toISOString()
       query = query.gte('created_at', cutoff).order('created_at', { ascending: false })
     }
 
     const { data } = await query
-    setListings(data ?? [])
+    let result = data ?? []
+
+    if (sortierung === 'schnellste_antwort') {
+      result = [...result].sort((a, b) => {
+        const aH = responseByProvider[a.provider_id]?.avgHours ?? Infinity
+        const bH = responseByProvider[b.provider_id]?.avgHours ?? Infinity
+        return aH - bH
+      })
+    }
+
+    setListings(result)
     setLoading(false)
-  }, [kategorie, region, sortierung])
+  }, [kategorie, region, sortierung, responseByProvider])
 
   useEffect(() => { fetchListings() }, [fetchListings])
 
@@ -119,50 +139,56 @@ export default function FilterSection() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {listings.map((listing) => (
-            <Link
-              key={listing.id}
-              href={`/angebote/${listing.id}`}
-              className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all group"
-            >
-              <div className="relative h-40 bg-gray-100 overflow-hidden">
-                {listing.photos?.[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={listing.photos[0]}
-                    alt={listing.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
-                    🎪
-                  </div>
-                )}
-                {isNeu(listing) && (
-                  <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                    Neu
-                  </span>
-                )}
-              </div>
-              <div className="p-4">
-                <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
-                  {KATEGORIE_LABEL[listing.category] ?? listing.category}
-                </span>
-                <p className="font-semibold text-gray-900 leading-snug mt-2 line-clamp-2">
-                  {listing.title}
-                </p>
-                {listing.description && (
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{listing.description}</p>
-                )}
-                <div className="flex items-center justify-between mt-3">
-                  <p className="font-bold text-gray-900">{formatPreis(listing)}</p>
-                  {listing.region && (
-                    <span className="text-xs text-gray-400">{listing.region}</span>
+          {listings.map((listing) => {
+            const responseInfo = listing.provider_id ? responseByProvider[listing.provider_id] : null
+            return (
+              <Link
+                key={listing.id}
+                href={`/angebote/${listing.id}`}
+                className={`bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all group ${getBorderClass(listing, borderByListing)}`}
+              >
+                <div className="relative h-40 bg-gray-100 overflow-hidden">
+                  {listing.photos?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={listing.photos[0]}
+                      alt={listing.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
+                      🎪
+                    </div>
+                  )}
+                  {isNeu(listing) && (
+                    <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                      Neu
+                    </span>
                   )}
                 </div>
-              </div>
-            </Link>
-          ))}
+                <div className="p-4">
+                  <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
+                    {KATEGORIE_LABEL[listing.category] ?? listing.category}
+                  </span>
+                  <p className="font-semibold text-gray-900 leading-snug mt-2 line-clamp-2">
+                    {listing.title}
+                  </p>
+                  {listing.description && (
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{listing.description}</p>
+                  )}
+                  {responseInfo && (
+                    <p className="text-xs text-gray-400 mt-1.5">{responseInfo.label}</p>
+                  )}
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="font-bold text-gray-900">{formatPreis(listing)}</p>
+                    {listing.region && (
+                      <span className="text-xs text-gray-400">{listing.region}</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </>

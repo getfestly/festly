@@ -30,7 +30,9 @@ export async function POST(request, { params }) {
   }
 
   const { error: updateErr } = await supabase
-    .from('bookings').update({ status }).eq('id', bookingId)
+    .from('bookings')
+    .update({ status, provider_responded_at: new Date().toISOString() })
+    .eq('id', bookingId)
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
 
