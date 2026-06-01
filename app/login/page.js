@@ -1,11 +1,13 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const resetSuccess = searchParams.get('reset') === 'success'
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -17,12 +19,17 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
     })
 
     if (authError) { setError(authError.message); setLoading(false); return }
+
+    if (!data.user?.email_confirmed_at) {
+      router.push('/auth/verify-email')
+      return
+    }
 
     router.push('/mein-bereich')
   }
@@ -36,6 +43,12 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Einloggen</h1>
         <p className="text-gray-500 mb-8">Willkommen zurück bei Festly</p>
 
+        {resetSuccess && (
+          <p className="text-green-700 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+            Passwort erfolgreich geändert. Du kannst dich jetzt einloggen.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">E-Mail</label>
@@ -47,7 +60,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Passwort</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-700">Passwort</label>
+              <Link href="/auth/forgot-password" className="text-xs text-gray-500 hover:text-gray-700">
+                Passwort vergessen?
+              </Link>
+            </div>
             <input
               type="password" required value={form.password} onChange={set('password')}
               placeholder="Dein Passwort"
@@ -73,5 +91,13 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
