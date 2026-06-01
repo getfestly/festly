@@ -194,6 +194,26 @@ export default function AnfragenPage() {
                     </div>
                   )}
 
+                  {/* Kunde: Jetzt bezahlen (wenn Anbieter angenommen hat) */}
+                  {role === 'customer' && booking.status === 'accepted' && booking.price_model !== 'on_request' && (
+                    <Link
+                      href={`/buchungen/${booking.id}/bezahlen`}
+                      className="w-full block text-center bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                    >
+                      Jetzt bezahlen
+                    </Link>
+                  )}
+
+                  {/* Kunde: Bezahlt-Badge */}
+                  {role === 'customer' && booking.status === 'paid' && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
+                        ✓ Bezahlt
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Kunde: Anfrage zurückziehen (nur solange pending) */}
                   {role === 'customer' && booking.status === 'pending' && (
                     <button
                       onClick={() => handleStatus(booking.id, 'cancelled')}
