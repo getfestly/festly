@@ -10,24 +10,16 @@ export default function Nav() {
   const pathname = usePathname()
   const [profile, setProfile] = useState(null)
   const [userId, setUserId] = useState(null)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      setUserId(user.id)
-      supabase.from('profiles').select('role, display_name').eq('id', user.id).single()
-        .then(({ data }) => {
-          setProfile(data)
-          if (data?.role === 'provider') {
-            supabase
-              .from('bookings')
-              .select('id', { count: 'exact', head: true })
-              .eq('provider_id', user.id)
-              .eq('status', 'pending')
-              .then(({ count }) => setPendingCount(count ?? 0))
-          }
-        })
+      if (user) {
+        setUserId(user.id)
+        supabase.from('profiles').select('role').eq('id', user.id).single()
+          .then(({ data }) => setProfile(data))
+      }
+      setAuthChecked(true)
     })
   }, [])
 
@@ -36,73 +28,58 @@ export default function Nav() {
     router.push('/login')
   }
 
-  const navLink = (href, label) => {
-    const active = href === '/mein-bereich'
-      ? pathname === '/mein-bereich'
-      : pathname.startsWith(href)
-    return (
-      <Link
-        key={href}
-        href={href}
-        className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-          active
-            ? 'bg-gray-100 text-gray-900 font-medium'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        }`}
-      >
-        {label}
-      </Link>
-    )
-  }
+  const kontoActive  = pathname.startsWith('/mein-bereich')
+  const adminActive  = pathname.startsWith('/admin')
+  const isAdmin      = userId === ADMIN_USER_ID
 
-  const anfragenActive = pathname.startsWith('/mein-bereich/anfragen')
+  const navBtn = (href, label, active) => (
+    <Link
+      href={href}
+      className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+        active
+          ? 'bg-gray-100 text-gray-900 font-medium'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      }`}
+    >
+      {label}
+    </Link>
+  )
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-2">
-        <Link
-          href={userId ? '/mein-bereich' : '/'}
-          className="font-bold text-gray-900 text-base mr-3 shrink-0"
-        >
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
+        <Link href="/marktplatz" className="font-bold text-gray-900 text-base shrink-0">
           Festly
         </Link>
 
-        {profile && (
-          <>
-            <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0">
-              {navLink('/marktplatz', 'Marktplatz')}
-
-              {/* Anfragen-Link mit Badge */}
+        <div className="flex items-center gap-1 ml-auto">
+          {/* Nicht eingeloggt */}
+          {authChecked && !profile && (
+            <>
+              {navBtn('/login', 'Anmelden', false)}
               <Link
-                href="/mein-bereich/anfragen"
-                className={`relative text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                  anfragenActive
-                    ? 'bg-gray-100 text-gray-900 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
+                href="/register"
+                className="text-sm px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
-                Anfragen
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
-                    {pendingCount > 9 ? '9+' : pendingCount}
-                  </span>
-                )}
+                Registrieren
               </Link>
+            </>
+          )}
 
-              {profile.role === 'provider' && navLink('/anbieter/listings', 'Meine Angebote')}
-              {userId === ADMIN_USER_ID && navLink('/admin', 'Admin')}
-            </div>
-            <div className="flex items-center gap-1 shrink-0 border-l border-gray-100 pl-3 ml-1">
-              {navLink('/mein-bereich', 'Konto')}
+          {/* Eingeloggt */}
+          {profile && (
+            <>
+              {isAdmin && navBtn('/admin', 'Admin', adminActive)}
+              {navBtn('/mein-bereich', 'Konto', kontoActive)}
               <button
                 onClick={handleLogout}
                 className="text-sm px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
                 Abmelden
               </button>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </nav>
   )

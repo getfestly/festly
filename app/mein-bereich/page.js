@@ -151,9 +151,11 @@ export default function MeinBereichPage() {
             className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"
           >
             <p className="font-semibold text-gray-900 mb-1">
-              {profile?.role === 'provider' ? 'Eingegangene Anfragen' : 'Meine Anfragen'}
+              {profile?.role === 'provider' ? 'Buchungen & Anfragen' : 'Meine Buchungen'}
             </p>
-            <p className="text-sm text-gray-500">Buchungsanfragen verwalten</p>
+            <p className="text-sm text-gray-500">
+              {profile?.role === 'provider' ? 'Anfragen annehmen und verwalten' : 'Buchungsanfragen und Status'}
+            </p>
           </Link>
 
           <Link
