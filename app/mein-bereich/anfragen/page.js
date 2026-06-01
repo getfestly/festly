@@ -174,6 +174,17 @@ export default function AnfragenPage() {
           {role === 'provider' ? 'Eingegangene Anfragen' : 'Meine Buchungsanfragen'}
         </h1>
 
+        {role === 'provider' && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <Link
+              href="/anbieter/listings/neu"
+              className="flex items-center gap-2 bg-purple-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-purple-700 active:bg-purple-800 transition-colors whitespace-nowrap"
+            >
+              ➕ Angebot erstellen
+            </Link>
+          </div>
+        )}
+
         {bookings.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
