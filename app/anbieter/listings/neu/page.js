@@ -159,7 +159,7 @@ export default function NeuesListingPage() {
               </div>
               {cfg.unitPlaceholder && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Einheit-Label</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Mengenbezeichnung</label>
                   <input
                     type="text"
                     value={form.price_unit_label} onChange={set('price_unit_label')}
