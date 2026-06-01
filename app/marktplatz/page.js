@@ -23,7 +23,7 @@ export default function MarktplatzPage() {
     setLoading(true)
     let query = supabase
       .from('listings')
-      .select('id, title, description, category, price_cents, pricing_model, base_price_cents, price_per_unit_cents, included_quantity, unit_label, region, photos')
+      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos')
       .eq('is_active', true)
 
     if (kategorie) query = query.eq('category', kategorie)

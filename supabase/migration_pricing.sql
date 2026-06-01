@@ -1,25 +1,22 @@
 -- ============================================================================
 -- MIGRATION: Flexible Preismodelle für listings
--- Ausführen in: Supabase Dashboard → SQL Editor
+-- STATUS: bereits ausgeführt in Supabase
 -- ============================================================================
 
--- 1. Enum-Typ für Preismodelle anlegen
-create type pricing_model as enum (
-  'flat_day',            -- Tagespauschale
-  'per_person',          -- Preis pro Person
-  'base_plus_quantity',  -- Grundpreis + inkludierte Menge + Preis je Einheit
-  'hourly',              -- Stundensatz (opt. Grundpreis + inkl. Stunden)
-  'on_request'           -- Preis auf Anfrage
+-- Enum-Typ für Preismodelle
+CREATE TYPE price_model AS ENUM (
+  'flat',        -- Pauschale/Tag
+  'per_person',  -- pro Person
+  'flat_plus',   -- Pauschale + je Einheit (z.B. Pauschale + pro Toilettenwagen)
+  'hourly',      -- Stundensatz
+  'on_request'   -- auf Anfrage
 );
 
--- 2. Neue Spalten zur listings-Tabelle hinzufügen (alle nullable für Rückwärtskompatibilität)
-alter table listings
-  add column pricing_model        pricing_model,
-  add column base_price_cents     integer,       -- Grund-/Tagespreis
-  add column included_quantity    integer,       -- inkludierte Stunden/Mengen-Einheiten
-  add column price_per_unit_cents integer,       -- Preis je weitere Stunde/Person/Einheit
-  add column min_quantity         integer,       -- Mindestmenge/-personen
-  add column unit_label           text;          -- z.B. "Person", "Stück", "Stunde"
+-- Spalten zur listings-Tabelle hinzufügen
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS price_model price_model NOT NULL DEFAULT 'flat',
+  ADD COLUMN IF NOT EXISTS price_unit_label TEXT;
+  -- Freitext-Label für die Einheit, z.B. "Person", "Stunde", "Wagen"
+  -- NULL erlaubt (bei flat und on_request nicht benötigt)
 
--- Hinweis: price_cents bleibt erhalten und wird beim Speichern als Sortierfeld
--- automatisch aus dem gewählten Preismodell befüllt (siehe App-Code).
+-- Hinweis: price_cents bleibt der zentrale Preisbetrag (Betrag pro Tag / Person / Stunde).
