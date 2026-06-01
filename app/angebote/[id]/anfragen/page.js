@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { submitBooking } from '@/app/actions/booking'
 import Nav from '@/components/Nav'
 
 const eur = (cents) =>
@@ -71,24 +72,14 @@ export default function AnfragenPage() {
     setError(null)
     setLoading(true)
 
-    const qty = Math.max(1, parseInt(quantity) || 1)
-    const amount_cents = calcAmountCents(listing, qty)
-
-    const { error: bookingError } = await supabase.from('bookings').insert({
-      listing_id:           listing.id,
-      customer_id:          user.id,
-      provider_id:          listing.provider_id,
-      event_date:           eventDate,
-      status:               'pending',
-      quantity:             qty,
-      price_model:          listing.price_model ?? 'flat',
-      price_snapshot_cents: listing.price_cents,
-      amount_cents,
-      commission_cents:     0,     // DB-Trigger überschreibt
-      provider_payout_cents: 0,    // DB-Trigger überschreibt
+    // Serverseitige Berechnung und Insert — Client übergibt nur listingId, Datum, Menge
+    const result = await submitBooking({
+      listingId,
+      eventDate,
+      quantity,
     })
 
-    if (bookingError) { setError(bookingError.message); setLoading(false); return }
+    if (result.error) { setError(result.error); setLoading(false); return }
     router.push('/mein-bereich/anfragen')
   }
 
