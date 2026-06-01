@@ -67,15 +67,22 @@ export default function MarktplatzPage() {
             className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
           />
 
-          <select
-            value={sortierung}
-            onChange={(e) => setSortierung(e.target.value)}
-            className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ml-auto"
-          >
-            {SORTIER_OPTIONEN.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <div className="ml-auto flex items-center gap-3">
+            {!loading && (
+              <span className="text-sm text-gray-400">
+                {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'}
+              </span>
+            )}
+            <select
+              value={sortierung}
+              onChange={(e) => setSortierung(e.target.value)}
+              className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mr-1"
+            >
+              {SORTIER_OPTIONEN.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Ergebnisse */}
@@ -148,11 +155,6 @@ export default function MarktplatzPage() {
           </div>
         )}
 
-        {!loading && listings.length > 0 && (
-          <p className="text-center text-xs text-gray-400 mt-8">
-            {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'} gefunden
-          </p>
-        )}
       </main>
     </div>
   )
