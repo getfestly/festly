@@ -110,8 +110,13 @@ create table bookings (
   event_date      date not null,
   status          booking_status not null default 'pending',
 
+  -- Mengeneingabe des Kunden + Preismodell-Snapshot
+  quantity              integer not null default 1,  -- Anzahl Personen / Stunden / Einheiten
+  price_model           text,                        -- Kopie aus listings.price_model zum Buchungszeitpunkt
+  price_snapshot_cents  integer,                     -- Kopie von price_cents (Schutz vor Preisänderungen)
+
   -- Beträge (in Cent), bei Annahme fixiert
-  amount_cents          integer not null,      -- Gesamtpreis an Kunde
+  amount_cents          integer not null,      -- Gesamtpreis an Kunde (quantity × price_snapshot)
   commission_cents      integer not null,      -- 15 % Festly-Provision
   provider_payout_cents integer not null,      -- Auszahlung an Anbieter (85 %)
 
