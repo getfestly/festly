@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 export default function RegisterPage() {
   const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '', displayName: '', role: 'customer' })
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -16,6 +17,10 @@ export default function RegisterPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    if (!termsAccepted) {
+      setError('Bitte akzeptiere die AGB und Datenschutzerklärung.')
+      return
+    }
     setLoading(true)
 
     const { data, error: authError } = await supabase.auth.signUp({
@@ -32,6 +37,7 @@ export default function RegisterPage() {
       id: user.id,
       display_name: form.displayName,
       role: form.role,
+      accepted_terms_at: new Date().toISOString(),
     })
 
     if (profileError) {
@@ -125,6 +131,25 @@ export default function RegisterPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                required
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-gray-900"
+              />
+              <span className="text-sm text-gray-600">
+                Ich habe die{' '}
+                <Link href="/agb" target="_blank" className="underline text-gray-900 hover:text-gray-700">AGB</Link>
+                {' '}und{' '}
+                <Link href="/datenschutz" target="_blank" className="underline text-gray-900 hover:text-gray-700">Datenschutzerklärung</Link>
+                {' '}gelesen und akzeptiere sie.
+              </span>
+            </label>
           </div>
 
           {error && (
