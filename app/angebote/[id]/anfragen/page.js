@@ -231,7 +231,10 @@ export default function AnfragenPage() {
   const [quantity, setQuantity]             = useState('1')
   const [eventTitle, setEventTitle]         = useState('')
   const [eventDescription, setEventDescription] = useState('')
-  const [customerPlz, setCustomerPlz]       = useState('')
+  const [eventStreet, setEventStreet]       = useState('')
+  const [eventHouseNumber, setEventHouseNumber] = useState('')
+  const [eventZip, setEventZip]             = useState('')
+  const [eventCity, setEventCity]           = useState('')
   const [transportKm, setTransportKm]       = useState(null)
   const [transportCents, setTransportCents] = useState(0)
   const [transportLoading, setTransportLoading] = useState(false)
@@ -248,17 +251,15 @@ export default function AnfragenPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
 
-      const [listingRes, providerRes] = await Promise.all([
+      const [listingRes] = await Promise.all([
         supabase.from('listings')
           .select('id, title, price_cents, price_model, price_unit_label, provider_id, vehicle_type, setup_days')
           .eq('id', listingId).eq('is_active', true).single(),
-        // provider region geladen nach listing fetch
       ])
 
       if (!listingRes.data) { router.replace('/marktplatz'); return }
       const listing = listingRes.data
 
-      // Provider-Region und blockierte Tage parallel laden
       const [profileRes, availRes, bookingRes] = await Promise.all([
         supabase.from('profiles').select('region').eq('id', listing.provider_id).single(),
         supabase.from('listing_availability').select('blocked_from, blocked_until').eq('listing_id', listingId),
@@ -331,6 +332,10 @@ export default function AnfragenPage() {
       eventTitle,
       eventDescription,
       transportCents,
+      eventStreet,
+      eventHouseNumber,
+      eventZip,
+      eventCity,
     })
 
     if (result.error) { setError(result.error); setLoading(false); return }
@@ -357,7 +362,10 @@ export default function AnfragenPage() {
   const needsQuantity = ['per_person', 'flat_plus', 'hourly'].includes(listing.price_model)
   const qty    = Math.max(1, parseInt(quantity) || 1)
   const days   = eventDateTo ? diffDays(eventDateFrom, eventDateTo) : (eventDateFrom ? 1 : 1)
-  const baseCents  = eventDateFrom ? calcBaseCents(listing, qty, days) : 0
+  // flat_plus hat immer einen festen Grundpreis, unabhängig vom Datum
+  const baseCents = listing.price_model === 'flat_plus'
+    ? listing.price_cents
+    : (eventDateFrom ? calcBaseCents(listing, qty, days) : 0)
   const totalCents = baseCents + transportCents
   const payoutCents = Math.round(totalCents * 0.85)
   const vehicleType = VEHICLE_TYPES.find(v => v.id === listing.vehicle_type) ?? VEHICLE_TYPES[0]
@@ -394,20 +402,7 @@ export default function AnfragenPage() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
 
-          {/* Mengenfeld */}
-          {needsQuantity && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {listing.price_model === 'per_person' ? `Anzahl ${listing.price_unit_label ?? 'Personen'} *`
-                  : listing.price_model === 'hourly' ? `Anzahl ${listing.price_unit_label ?? 'Stunden'} *`
-                  : `Anzahl ${listing.price_unit_label ?? 'Einheiten'} *`}
-              </label>
-              <input type="number" required min="1" step="1" value={quantity}
-                onChange={e => setQuantity(e.target.value)} className={inputCls} />
-            </div>
-          )}
-
-          {/* Datums-Kalender */}
+          {/* 1. Datum */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Datum wählen *
@@ -426,26 +421,92 @@ export default function AnfragenPage() {
             />
           </div>
 
-          {/* PLZ Veranstaltungsort */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              PLZ des Veranstaltungsorts *
-            </label>
-            <input
-              type="text" required value={customerPlz}
-              onChange={e => setCustomerPlz(e.target.value)}
-              onBlur={e => calcTransport(e.target.value.trim())}
-              placeholder="z.B. 80331" maxLength={10}
-              className={inputCls}
-            />
-            {transportLoading && <p className="text-xs text-gray-400 mt-1.5">Fahrtkosten werden berechnet …</p>}
-            {transportError && !transportLoading && <p className="text-xs text-amber-600 mt-1.5">{transportError}</p>}
+          {/* 2. Adresse des Veranstaltungsorts */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-gray-700">Adresse des Veranstaltungsorts</p>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Straße *</label>
+                <input
+                  type="text" required value={eventStreet}
+                  onChange={e => setEventStreet(e.target.value)}
+                  placeholder="Musterstraße"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hausnummer *</label>
+                <input
+                  type="text" required value={eventHouseNumber}
+                  onChange={e => setEventHouseNumber(e.target.value)}
+                  placeholder="12a"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
+                <input
+                  type="text" required value={eventZip}
+                  onChange={e => setEventZip(e.target.value)}
+                  onBlur={e => calcTransport(e.target.value.trim())}
+                  placeholder="80331" maxLength={10}
+                  className={inputCls}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Stadt *</label>
+                <input
+                  type="text" required value={eventCity}
+                  onChange={e => setEventCity(e.target.value)}
+                  placeholder="München"
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            {transportLoading && <p className="text-xs text-gray-400">Fahrtkosten werden berechnet …</p>}
+            {transportError && !transportLoading && <p className="text-xs text-amber-600">{transportError}</p>}
             {transportKm != null && !transportLoading && (
-              <p className="text-xs text-gray-400 mt-1.5">Anfahrt ca. {transportKm} km — Hin- und Rückfahrt berücksichtigt</p>
+              <p className="text-xs text-gray-400">Anfahrt ca. {transportKm} km — Hin- und Rückfahrt berücksichtigt</p>
             )}
           </div>
 
-          {/* Preisaufschlüsselung */}
+          {/* 3. Anzahl */}
+          {needsQuantity && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Anzahl *</label>
+              <input type="number" required min="1" step="1" value={quantity}
+                onChange={e => setQuantity(e.target.value)} className={inputCls} />
+            </div>
+          )}
+
+          {/* 4. Wie heißt dein Event */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Wie heißt dein Event? *</label>
+            <input type="text" required maxLength={100} value={eventTitle}
+              onChange={e => setEventTitle(e.target.value)}
+              placeholder="z.B. Hochzeit, Geburtstag, Firmenfest, Stadtfest …"
+              className={inputCls} />
+          </div>
+
+          {/* 5. Beschreibe dein Event — wächst automatisch mit */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Beschreibe dein Event</label>
+            <textarea
+              maxLength={1000} value={eventDescription}
+              onChange={e => setEventDescription(e.target.value)}
+              onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+              placeholder="Wie viele Gäste? Besondere Wünsche?"
+              className={`${inputCls} resize-none overflow-hidden`}
+              style={{ minHeight: '4.5rem' }}
+            />
+          </div>
+
+          {/* 6. Preisvorschau */}
           {listing.price_model !== 'on_request' ? (
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2">
               {rows.map((row, i) => (
@@ -476,24 +537,7 @@ export default function AnfragenPage() {
             </div>
           )}
 
-          {/* Event-Titel */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Wie heißt dein Event? *</label>
-            <input type="text" required maxLength={100} value={eventTitle}
-              onChange={e => setEventTitle(e.target.value)}
-              placeholder="z.B. Hochzeit, Geburtstag, Firmenfest, Stadtfest …"
-              className={inputCls} />
-          </div>
-
-          {/* Event-Beschreibung */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Beschreibe dein Event</label>
-            <textarea rows={3} maxLength={1000} value={eventDescription}
-              onChange={e => setEventDescription(e.target.value)}
-              placeholder="Wie viele Gäste? Besondere Wünsche?"
-              className={`${inputCls} resize-none`} />
-          </div>
-
+          {/* 7. Absenden */}
           {error && (
             <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</p>
           )}

@@ -37,6 +37,7 @@ function overlaps(aFrom, aUntil, bFrom, bUntil) {
 export async function submitBooking({
   listingId, eventDateFrom, eventDateTo, quantity,
   eventTitle, eventDescription, transportCents = 0,
+  eventStreet, eventHouseNumber, eventZip, eventCity,
   // Legacy-Compat: falls noch eventDate übergeben wird
   eventDate,
 }) {
@@ -122,6 +123,10 @@ export async function submitBooking({
     provider_payout_cents:0,
     event_title:          eventTitle || null,
     event_description:    eventDescription || null,
+    event_street:         eventStreet || null,
+    event_house_number:   eventHouseNumber || null,
+    event_zip:            eventZip || null,
+    event_city:           eventCity || null,
   })
 
   if (insertError) return { error: insertError.message }
