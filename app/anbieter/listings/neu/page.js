@@ -62,7 +62,7 @@ export default function NeuesListingPage() {
     description: '',
     category: 'fahrgeschaefte',
     subcategory: '',
-    vehicle_type: 'pkw_anhaenger',
+    vehicle_type: '',
     region: '',
     price_model: 'flat',
     priceEuro: '',
@@ -168,7 +168,7 @@ export default function NeuesListingPage() {
       description:      form.description || null,
       category:         form.category,
       subcategory:      form.subcategory || null,
-      vehicle_type:     form.vehicle_type,
+      vehicle_type:     form.vehicle_type || null,
       price_model:      form.price_model,
       price_cents,
       price_unit_label: form.price_unit_label || null,
@@ -290,10 +290,11 @@ export default function NeuesListingPage() {
             </div>
           )}
 
-          {/* Fahrzeugtyp (Pflichtfeld) */}
+          {/* Fahrzeugtyp (optional) */}
           <div className="border-t border-gray-100 pt-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Fahrzeugtyp *</label>
-            <select required value={form.vehicle_type} onChange={set('vehicle_type')} className={inputCls}>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Fahrzeugtyp für Anlieferung</label>
+            <select value={form.vehicle_type} onChange={set('vehicle_type')} className={inputCls}>
+              <option value="">Bitte wählen (optional)</option>
               {VEHICLE_TYPES.map((v) => (
                 <option key={v.id} value={v.id}>{v.label}</option>
               ))}
