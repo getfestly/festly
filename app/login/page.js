@@ -2,6 +2,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
 function LoginForm() {
@@ -40,6 +41,9 @@ function LoginForm() {
         <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 mb-8 block">
           ← Zurück zur Startseite
         </Link>
+        <div className="flex justify-center mb-6">
+          <Image src="/logo.png" alt="Festly" width={160} height={64} className="h-16 w-auto" />
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Einloggen</h1>
         <p className="text-gray-500 mb-8">Willkommen zurück bei Festly</p>
 

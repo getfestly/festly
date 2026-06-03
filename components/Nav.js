@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ADMIN_USER_ID } from '@/lib/admin'
@@ -50,8 +51,8 @@ export default function Nav() {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-2">
-        <Link href="/marktplatz" className="font-bold text-base shrink-0 gradient-text">
-          Festly
+        <Link href="/" className="shrink-0">
+          <Image src="/logo.png" alt="Festly" width={150} height={40} className="h-10 w-auto" />
         </Link>
 
         <Link

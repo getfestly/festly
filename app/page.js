@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { KATEGORIEN } from '@/lib/constants'
 
 const KATEGORIE_EMOJIS = {
@@ -42,6 +43,9 @@ export default function Home() {
         style={{ background: 'linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 100%)' }}
       >
         <div className="max-w-3xl mx-auto">
+          <div className="flex justify-center mb-8">
+            <Image src="/logo.png" alt="Festly" width={240} height={96} className="h-24 w-auto" />
+          </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
             Dein Event.<br />
             <span className="gradient-text">Perfekt organisiert.</span>
