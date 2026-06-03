@@ -39,10 +39,12 @@ export async function POST(request, { params }) {
   // E-Mail an Kunden (fire-and-forget)
   const admin = createAdminClient()
   try {
-    const [{ data: { user: customerUser } }, { data: providerProfile }] = await Promise.all([
+    const [{ data: { user: customerUser } }, { data: providerProfile }, { data: customerProfile }] = await Promise.all([
       admin.auth.admin.getUserById(booking.customer_id),
       admin.from('profiles').select('display_name').eq('id', user.id).single(),
+      admin.from('profiles').select('display_name').eq('id', booking.customer_id).single(),
     ])
+    const customerName = customerProfile?.display_name ?? customerUser?.email
     const listingTitle = booking.listings?.title ?? 'Angebot'
     const eventDate = new Date(booking.event_date).toLocaleDateString('de-DE', {
       day: '2-digit', month: 'long', year: 'numeric',
@@ -51,7 +53,7 @@ export async function POST(request, { params }) {
     if (status === 'accepted') {
       await sendBookingAccepted({
         to: customerUser?.email,
-        customerName: customerUser?.email,
+        customerName,
         listingTitle,
         providerName: providerProfile?.display_name ?? 'Der Anbieter',
         eventDate,
@@ -61,7 +63,7 @@ export async function POST(request, { params }) {
     } else {
       await sendBookingRejected({
         to: customerUser?.email,
-        customerName: customerUser?.email,
+        customerName,
         listingTitle,
       })
     }

@@ -34,11 +34,15 @@ export async function POST(request, { params }) {
     // E-Mail an Kunden (fire-and-forget)
     if (isCustomer || isProvider) {
       const admin = createAdminClient()
-      const { data: { user: customerUser } } = await admin.auth.admin.getUserById(booking.customer_id)
+      const [{ data: { user: customerUser } }, { data: customerProfile }] = await Promise.all([
+        admin.auth.admin.getUserById(booking.customer_id),
+        admin.from('profiles').select('display_name').eq('id', booking.customer_id).single(),
+      ])
+      const customerName = customerProfile?.display_name ?? customerUser?.email
       try {
         await sendCancellationConfirmed({
           to: customerUser?.email,
-          customerName: customerUser?.email,
+          customerName,
           listingTitle: booking.listings?.title ?? 'Angebot',
           refundCents,
           amount_cents: booking.status === 'paid' ? booking.amount_cents : 0,
