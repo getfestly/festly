@@ -1,3 +1,4 @@
+// Einziger aktiver Stripe-Webhook-Endpunkt
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
@@ -81,6 +82,21 @@ export async function POST(request) {
         await admin.from('payments').update({ status: 'refunded' }).eq('id', payment.id)
         console.log(`[webhook] Rückerstattung für Charge ${charge.id} verarbeitet`)
       }
+      break
+    }
+
+    case 'transfer.created': {
+      const transfer = event.data.object
+      const bookingId = transfer.metadata?.booking_id
+      if (!bookingId) { console.warn('[webhook] transfer.created ohne booking_id'); break }
+
+      await admin.from('payments').update({
+        status: 'released',
+        stripe_transfer_id: transfer.id,
+        released_at: new Date().toISOString(),
+      }).eq('booking_id', bookingId).neq('status', 'released')
+
+      console.log(`[webhook] Transfer ${transfer.id} für Buchung ${bookingId} gespeichert`)
       break
     }
 
