@@ -40,7 +40,7 @@ export default function Home() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section
-        className="min-h-[85vh] flex items-center justify-center px-4 text-center"
+        className="min-h-[70vh] sm:min-h-[85vh] py-20 flex items-center justify-center px-4 text-center"
         style={{ background: 'radial-gradient(ellipse at center, #fdf4ff 0%, #fce7f3 35%, #ffffff 70%)' }}
       >
         <div className="max-w-3xl mx-auto">
@@ -115,24 +115,28 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-10">
             Was suchst du?
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {KATEGORIEN.map((kat) => (
-              <Link
-                key={kat.value}
-                href={`/marktplatz?kategorie=${kat.value}`}
-                className="bg-white rounded-2xl p-5 text-center border border-gray-100
-                  hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50
-                  hover:border-pink-400 hover:shadow-md
-                  transition-all group min-h-[100px] flex flex-col items-center justify-center gap-2"
-              >
-                <div className="text-3xl group-hover:scale-110 transition-transform duration-200">
-                  {KATEGORIE_EMOJIS[kat.value] ?? '✨'}
-                </div>
-                <p className="text-sm font-bold text-gray-700 group-hover:gradient-text transition-colors">
-                  {kat.label}
-                </p>
-              </Link>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {KATEGORIEN.map((kat, i) => {
+              const isLastAlone = i === KATEGORIEN.length - 1 && KATEGORIEN.length % 2 !== 0
+              return (
+                <Link
+                  key={kat.value}
+                  href={`/marktplatz?kategorie=${kat.value}`}
+                  className={`bg-white rounded-2xl p-5 text-center border border-gray-100
+                    hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50
+                    hover:border-pink-400 hover:shadow-md
+                    transition-all group min-h-[100px] flex flex-col items-center justify-center gap-2
+                    ${isLastAlone ? 'col-span-2 md:col-span-1 mx-auto w-1/2 md:w-full' : ''}`}
+                >
+                  <div className="text-3xl group-hover:scale-110 transition-transform duration-200">
+                    {KATEGORIE_EMOJIS[kat.value] ?? '✨'}
+                  </div>
+                  <p className="text-sm font-bold text-gray-700 group-hover:gradient-text transition-colors">
+                    {kat.label}
+                  </p>
+                </Link>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -154,7 +158,7 @@ export default function Home() {
           </p>
           <Link
             href="/register"
-            className="inline-block bg-white px-8 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all"
+            className="inline-block bg-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           >
             <span className="bg-gradient-to-r from-[#C026A0] to-[#7C3AED] bg-clip-text text-transparent font-bold text-base">
               Jetzt Anbieter werden
