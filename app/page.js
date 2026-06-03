@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import Nav from '@/components/Nav'
-import { KATEGORIEN } from '@/lib/constants'
+import { KATEGORIEN_FLAT } from '@/lib/constants'
 
 const KATEGORIE_EMOJIS = {
-  food:       '🍽️',
-  ride:       '🎡',
-  music:      '🎵',
-  sanitation: '🚿',
-  tech:       '💡',
-  rental:     '📦',
-  other:      '✨',
+  // legacy
+  food: '🍽️', ride: '🎡', music: '🎵', sanitation: '🚿', tech: '💡', rental: '📦', other: '✨',
+  // neu
+  fahrgeschaefte: '🎡',
+  gastro:         '🍽️',
+  unterhaltung:   '🎵',
+  ausstattung:    '💡',
+  sanitaer_service: '🚿',
 }
 
 const STEPS = [
@@ -116,12 +117,12 @@ export default function Home() {
             Was suchst du?
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {KATEGORIEN.map((kat, i) => {
-              const isLastAlone = i === KATEGORIEN.length - 1 && KATEGORIEN.length % 2 !== 0
+            {KATEGORIEN_FLAT.map((kat, i) => {
+              const isLastAlone = i === KATEGORIEN_FLAT.length - 1 && KATEGORIEN_FLAT.length % 2 !== 0
               return (
                 <Link
-                  key={kat.value}
-                  href={`/marktplatz?kategorie=${kat.value}`}
+                  key={kat.id}
+                  href={`/marktplatz?kategorie=${kat.id}`}
                   className={`bg-white rounded-2xl p-5 text-center border border-gray-100
                     hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50
                     hover:border-pink-400 hover:shadow-md
@@ -129,7 +130,7 @@ export default function Home() {
                     ${isLastAlone ? 'col-span-2 md:col-span-1 mx-auto w-1/2 md:w-full' : ''}`}
                 >
                   <div className="text-3xl group-hover:scale-110 transition-transform duration-200">
-                    {KATEGORIE_EMOJIS[kat.value] ?? '✨'}
+                    {KATEGORIE_EMOJIS[kat.id] ?? '✨'}
                   </div>
                   <p className="text-sm font-bold text-gray-700 group-hover:gradient-text transition-colors">
                     {kat.label}

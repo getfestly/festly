@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
+import { KATEGORIEN_FLAT, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { trackEvent } from '@/lib/analytics'
 
 const SORTIER_OPTIONEN = [
@@ -15,13 +15,10 @@ const SORTIER_OPTIONEN = [
 ]
 
 const KATEGORIE_EMOJIS = {
-  food:       '🍽️',
-  ride:       '🎡',
-  music:      '🎵',
-  sanitation: '🚿',
-  tech:       '💡',
-  rental:     '📦',
-  other:      '✨',
+  // legacy
+  food: '🍽️', ride: '🎡', music: '🎵', sanitation: '🚿', tech: '💡', rental: '📦', other: '✨',
+  // neu
+  fahrgeschaefte: '🎡', gastro: '🍽️', unterhaltung: '🎵', ausstattung: '💡', sanitaer_service: '🚿',
 }
 
 const NEU_MS = 14 * 24 * 60 * 60 * 1000
@@ -114,14 +111,14 @@ export default function FilterSection({ responseByProvider = {} }) {
         >
           Alle
         </button>
-        {KATEGORIEN.map((k) => (
+        {KATEGORIEN_FLAT.map((k) => (
           <button
-            key={k.value}
-            onClick={() => setKategorie(k.value)}
-            className={`${pillBase} ${kategorie === k.value ? pillActive : pillInactive}`}
-            style={kategorie === k.value ? gradientStyle : {}}
+            key={k.id}
+            onClick={() => setKategorie(k.id)}
+            className={`${pillBase} ${kategorie === k.id ? pillActive : pillInactive}`}
+            style={kategorie === k.id ? gradientStyle : {}}
           >
-            {KATEGORIE_EMOJIS[k.value]} {k.label}
+            {KATEGORIE_EMOJIS[k.id]} {k.label}
           </button>
         ))}
       </div>

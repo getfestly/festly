@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN } from '@/lib/constants'
+import { KATEGORIEN_FLAT } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
@@ -12,7 +12,7 @@ const MAX_PHOTOS = 10
 export default function NeuesListingPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    title: '', description: '', category: 'food', region: '',
+    title: '', description: '', category: 'fahrgeschaefte', region: '',
     price_model: 'flat',
     priceEuro: '',
     price_unit_label: '',
@@ -154,8 +154,8 @@ export default function NeuesListingPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorie *</label>
             <select required value={form.category} onChange={set('category')} className={inputCls}>
-              {KATEGORIEN.map((k) => (
-                <option key={k.value} value={k.value}>{k.label}</option>
+              {KATEGORIEN_FLAT.map((k) => (
+                <option key={k.id} value={k.id}>{k.label}</option>
               ))}
             </select>
           </div>

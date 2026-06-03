@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN } from '@/lib/constants'
+import { KATEGORIEN_FLAT } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
@@ -174,8 +174,8 @@ export default function BearbeitenPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorie *</label>
             <select required value={form.category} onChange={set('category')} className={inputCls}>
-              {KATEGORIEN.map((k) => (
-                <option key={k.value} value={k.value}>{k.label}</option>
+              {KATEGORIEN_FLAT.map((k) => (
+                <option key={k.id} value={k.id}>{k.label}</option>
               ))}
             </select>
           </div>
