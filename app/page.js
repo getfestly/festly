@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { KATEGORIEN } from '@/lib/constants'
 
 const KATEGORIE_EMOJIS = {
@@ -39,14 +38,11 @@ export default function Home() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section
-        className="py-20 sm:py-28 px-4 text-center"
-        style={{ background: 'linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 100%)' }}
+        className="min-h-[85vh] flex items-center justify-center px-4 text-center"
+        style={{ background: 'radial-gradient(ellipse at center, #fdf4ff 0%, #fce7f3 35%, #ffffff 70%)' }}
       >
         <div className="max-w-3xl mx-auto">
-          <div className="flex justify-center mb-8">
-            <Image src="/logo.png" alt="Festly" width={240} height={96} className="h-24 w-auto" />
-          </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
+          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight mb-6 tracking-tight">
             Dein Event.<br />
             <span className="gradient-text">Perfekt organisiert.</span>
           </h1>
@@ -64,11 +60,20 @@ export default function Home() {
               Als Anbieter starten
             </Link>
           </div>
+
+          {/* Trust-Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-8 text-sm text-gray-400">
+            <span>✓ Sicher bezahlt via Stripe</span>
+            <span className="hidden sm:inline text-gray-300">·</span>
+            <span>✓ Kostenlos anfragen</span>
+            <span className="hidden sm:inline text-gray-300">·</span>
+            <span>✓ Nur bei Buchung zahlen</span>
+          </div>
         </div>
       </section>
 
       {/* ── So funktioniert's ────────────────────────────────────────────── */}
-      <section className="py-16 px-4 bg-white">
+      <section className="py-20 px-4 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-12">
             So funktioniert's
@@ -77,15 +82,15 @@ export default function Home() {
             {STEPS.map(({ step, icon, title, desc }) => (
               <div
                 key={step}
-                className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 relative"
+                className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm"
               >
                 <div
-                  className="absolute top-5 left-5 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mb-4"
                   style={{ background: 'linear-gradient(to right, #C026A0, #7C3AED)' }}
                 >
                   {step}
                 </div>
-                <div className="text-4xl mt-1 mb-4 pl-8">{icon}</div>
+                <div className="text-4xl mb-4">{icon}</div>
                 <h3 className="font-bold text-gray-900 text-lg mb-2">{title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
@@ -103,7 +108,7 @@ export default function Home() {
       </section>
 
       {/* ── Kategorien ───────────────────────────────────────────────────── */}
-      <section className="py-16 px-4 bg-gray-50">
+      <section className="py-20 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-10">
             Was suchst du?
@@ -113,12 +118,15 @@ export default function Home() {
               <Link
                 key={kat.value}
                 href={`/marktplatz?kategorie=${kat.value}`}
-                className="bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100 hover:shadow-md hover:border-pink-200 transition-all group"
+                className="bg-white rounded-2xl p-5 text-center border border-gray-100
+                  hover:bg-gradient-to-br hover:from-pink-50 hover:to-purple-50
+                  hover:border-pink-400 hover:shadow-md
+                  transition-all group min-h-[100px] flex flex-col items-center justify-center gap-2"
               >
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-200">
+                <div className="text-3xl group-hover:scale-110 transition-transform duration-200">
                   {KATEGORIE_EMOJIS[kat.value] ?? '✨'}
                 </div>
-                <p className="text-sm font-medium text-gray-700 group-hover:gradient-text transition-colors">
+                <p className="text-sm font-bold text-gray-700 group-hover:gradient-text transition-colors">
                   {kat.label}
                 </p>
               </Link>
@@ -127,22 +135,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Provider CTA ─────────────────────────────────────────────────── */}
+      {/* ── Anbieter CTA ─────────────────────────────────────────────────── */}
       <section
-        className="py-16 px-4 text-center"
-        style={{ background: 'linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 100%)' }}
+        className="py-20 px-4 text-center"
+        style={{ background: 'linear-gradient(135deg, #C026A0 0%, #7C3AED 100%)' }}
       >
         <div className="max-w-2xl mx-auto">
-          <p className="text-sm font-semibold uppercase tracking-wider gradient-text mb-3">
+          <p className="text-sm font-semibold uppercase tracking-wider text-pink-200 mb-3">
             Für Anbieter
           </p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl sm:text-4xl font-bold text-white mb-4">
             Biete deine Leistung an
           </h2>
-          <p className="text-gray-500 mb-8 text-base leading-relaxed">
+          <p className="text-pink-100 mb-10 text-base leading-relaxed">
             Kostenlos inserieren, nur bei Buchung zahlen — 15 % Provision, fair und transparent.
           </p>
-          <Link href="/register" className="btn-primary px-8 py-3.5 text-base font-semibold">
+          <Link
+            href="/register"
+            className="inline-block bg-white px-8 py-3.5 rounded-full text-base font-semibold gradient-text hover:shadow-xl hover:scale-105 transition-all"
+          >
             Jetzt Anbieter werden
           </Link>
         </div>
