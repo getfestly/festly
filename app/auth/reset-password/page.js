@@ -13,10 +13,19 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Supabase processes the #access_token fragment and fires PASSWORD_RECOVERY
+    // PASSWORD_RECOVERY wird gefeuert bei implizitem Flow (#access_token Fragment)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
+
+    // PKCE-Flow: ?code= Parameter in der URL → Session tauschen
+    const code = new URLSearchParams(window.location.search).get('code')
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).catch((e) => {
+        console.error('[reset-password] exchangeCodeForSession fehlgeschlagen:', e)
+      })
+    }
+
     return () => subscription.unsubscribe()
   }, [])
 
