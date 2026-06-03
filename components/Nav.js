@@ -45,11 +45,24 @@ export default function Nav() {
     </Link>
   )
 
+  const howItWorksActive = pathname === '/so-funktionierts'
+
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
-        <Link href="/marktplatz" className="font-bold text-gray-900 text-base shrink-0">
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-2">
+        <Link href="/marktplatz" className="font-bold text-base shrink-0 gradient-text">
           Festly
+        </Link>
+
+        <Link
+          href="/so-funktionierts"
+          className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
+            howItWorksActive
+              ? 'bg-gray-100 text-gray-900 font-medium'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+          }`}
+        >
+          So funktioniert's
         </Link>
 
         <div className="flex items-center gap-1 ml-auto">
@@ -59,7 +72,7 @@ export default function Nav() {
               {navBtn('/login', 'Anmelden', false)}
               <Link
                 href="/register"
-                className="text-sm px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="text-sm px-4 py-1.5 btn-primary whitespace-nowrap"
               >
                 Registrieren
               </Link>

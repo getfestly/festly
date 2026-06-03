@@ -178,7 +178,7 @@ export default function AnfragenPage() {
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Link
               href="/anbieter/listings/neu"
-              className="flex items-center gap-2 bg-purple-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-purple-700 active:bg-purple-800 transition-colors whitespace-nowrap"
+              className="flex items-center gap-2 btn-primary px-5 py-3 text-sm font-medium"
             >
               ➕ Angebot erstellen
             </Link>

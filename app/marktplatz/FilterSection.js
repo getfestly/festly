@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
@@ -29,9 +30,10 @@ function getBorderClass(listing, borderByListing) {
 }
 
 export default function FilterSection({ borderByListing = {}, responseByProvider = {} }) {
+  const searchParams = useSearchParams()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [kategorie, setKategorie] = useState('')
+  const [kategorie, setKategorie] = useState(searchParams.get('kategorie') ?? '')
   const [region, setRegion] = useState('')
   const [sortierung, setSortierung] = useState('newest')
 
@@ -161,7 +163,10 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
                     </div>
                   )}
                   {isNeu(listing) && (
-                    <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <span
+                      className="absolute top-2 left-2 text-white text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: 'linear-gradient(to right, #C026A0, #7C3AED)' }}
+                    >
                       Neu
                     </span>
                   )}

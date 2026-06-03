@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { ADMIN_USER_ID } from '@/lib/admin'
@@ -87,7 +88,7 @@ async function fetchPageData() {
 function QuickActions({ role, isAdmin }) {
   if (!role) return null
 
-  const btn = 'flex items-center gap-2 bg-purple-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-purple-700 active:bg-purple-800 transition-colors whitespace-nowrap'
+  const btn = 'flex items-center gap-2 btn-primary px-5 py-3 text-sm font-medium'
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -118,10 +119,12 @@ export default async function MarktplatzPage() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
         <QuickActions role={userRole} isAdmin={isAdmin} />
-        <FilterSection
-          borderByListing={borderByListing}
-          responseByProvider={responseByProvider}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center py-24 text-gray-400">Lade Angebote …</div>}>
+          <FilterSection
+            borderByListing={borderByListing}
+            responseByProvider={responseByProvider}
+          />
+        </Suspense>
       </main>
     </div>
   )
