@@ -97,13 +97,11 @@ function QuickActions({ role, isAdmin }) {
           <Link href="/admin"                 className={btn}>⚙️ Admin-Bereich</Link>
           <Link href="/mein-bereich/anfragen" className={btn}>📋 Anfragen</Link>
         </>
-      ) : role === 'provider' ? (
+      ) : (
         <>
           <Link href="/anbieter/listings/neu" className={btn}>➕ Angebot erstellen</Link>
           <Link href="/mein-bereich/anfragen" className={btn}>📋 Meine Anfragen</Link>
         </>
-      ) : (
-        <Link href="/mein-bereich/anfragen"   className={btn}>📋 Meine Anfragen</Link>
       )}
     </div>
   )

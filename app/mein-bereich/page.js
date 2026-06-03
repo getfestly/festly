@@ -15,6 +15,7 @@ export default function MeinBereichPage() {
   const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [providerRating, setProviderRating] = useState(null) // { avg, count }
+  const [listingsCount, setListingsCount] = useState(0)
   const [stripeLoading, setStripeLoading] = useState(false)
   const [stripeError, setStripeError] = useState(null)
 
@@ -31,18 +32,23 @@ export default function MeinBereichPage() {
         .single()
       setProfile(data)
 
-      if (data?.role === 'provider') {
+      const { data: myListings } = await supabase
+        .from('listings').select('id').eq('provider_id', user.id)
+      const count = myListings?.length ?? 0
+      setListingsCount(count)
+
+      if (count > 0) {
         const { data: providerBookings } = await supabase
           .from('bookings').select('id').eq('provider_id', user.id).eq('status', 'completed')
         if (providerBookings?.length) {
           const ids = providerBookings.map(b => b.id)
           const { data: ratingRows } = await supabase
             .from('reviews').select('rating').in('booking_id', ids)
-          const count = ratingRows?.length ?? 0
-          const avg = count
-            ? (ratingRows.reduce((s, r) => s + r.rating, 0) / count).toFixed(1)
+          const rCount = ratingRows?.length ?? 0
+          const avg = rCount
+            ? (ratingRows.reduce((s, r) => s + r.rating, 0) / rCount).toFixed(1)
             : null
-          setProviderRating({ avg, count })
+          setProviderRating({ avg, count: rCount })
         }
       }
 
@@ -109,8 +115,8 @@ export default function MeinBereichPage() {
           </div>
         </div>
 
-        {/* Auszahlungskonto — nur für Anbieter */}
-        {profile?.role === 'provider' && (
+        {/* Auszahlungskonto — sichtbar sobald Listings vorhanden */}
+        {listingsCount > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
             <h2 className="font-semibold text-gray-900 mb-3">Auszahlungskonto</h2>
 
@@ -151,11 +157,19 @@ export default function MeinBereichPage() {
             className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"
           >
             <p className="font-semibold text-gray-900 mb-1">
-              {profile?.role === 'provider' ? 'Buchungen & Anfragen' : 'Meine Buchungen'}
+              {listingsCount > 0 ? 'Buchungen & Anfragen' : 'Meine Buchungen'}
             </p>
             <p className="text-sm text-gray-500">
-              {profile?.role === 'provider' ? 'Anfragen annehmen und verwalten' : 'Buchungsanfragen und Status'}
+              {listingsCount > 0 ? 'Anfragen annehmen und verwalten' : 'Buchungsanfragen und Status'}
             </p>
+          </Link>
+
+          <Link
+            href="/anbieter/listings"
+            className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"
+          >
+            <p className="font-semibold text-gray-900 mb-1">Meine Angebote</p>
+            <p className="text-sm text-gray-500">Angebote erstellen und verwalten</p>
           </Link>
 
           <Link
@@ -165,16 +179,6 @@ export default function MeinBereichPage() {
             <p className="font-semibold text-gray-900 mb-1">Marktplatz</p>
             <p className="text-sm text-gray-500">Event-Dienstleistungen entdecken</p>
           </Link>
-
-          {profile?.role === 'provider' && (
-            <Link
-              href="/anbieter/listings"
-              className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all"
-            >
-              <p className="font-semibold text-gray-900 mb-1">Meine Angebote</p>
-              <p className="text-sm text-gray-500">Angebote erstellen und verwalten</p>
-            </Link>
-          )}
 
           {userId === ADMIN_USER_ID && (
             <Link

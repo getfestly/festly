@@ -8,7 +8,7 @@ import { trackEvent, identifyUser } from '@/lib/analytics'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ email: '', password: '', displayName: '', role: 'customer' })
+  const [form, setForm] = useState({ email: '', password: '', displayName: '' })
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -38,13 +38,13 @@ export default function RegisterPage() {
     const { error: profileError } = await supabase.from('profiles').insert({
       id: user.id,
       display_name: form.displayName,
-      role: form.role,
+      role: 'customer',
       accepted_terms_at: new Date().toISOString(),
     })
 
     if (profileError) {
       if (!data.session) {
-        trackEvent('user_registered', { role: form.role })
+        trackEvent('user_registered', { role: 'customer' })
         setEmailSent(true)
       } else {
         setError(profileError.message)
@@ -53,8 +53,8 @@ export default function RegisterPage() {
       return
     }
 
-    trackEvent('user_registered', { role: form.role })
-    identifyUser(user.id, { role: form.role })
+    trackEvent('user_registered', { role: 'customer' })
+    identifyUser(user.id, { role: 'customer' })
     router.push('/mein-bereich')
   }
 
@@ -120,28 +120,6 @@ export default function RegisterPage() {
               placeholder="Mindestens 6 Zeichen"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Ich bin …</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { value: 'customer', label: 'Kunde' },
-                { value: 'provider', label: 'Anbieter' },
-              ].map(({ value, label }) => (
-                <button
-                  key={value} type="button"
-                  onClick={() => setForm((f) => ({ ...f, role: value }))}
-                  className={`py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
-                    form.role === value
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div>

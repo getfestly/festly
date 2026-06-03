@@ -22,15 +22,16 @@ export default function NeuesListingPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
 
   useEffect(() => {
     async function check() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role !== 'provider') { router.replace('/mein-bereich'); return }
       setUser(user)
+      setProfile(profileData)
     }
     check()
   }, [router])
@@ -76,6 +77,10 @@ export default function NeuesListingPage() {
     const price_cents = form.price_model === 'on_request'
       ? 0
       : Math.round(parseFloat(form.priceEuro) * 100)
+
+    if (profile?.role === 'customer') {
+      await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
+    }
 
     const { error: insertError } = await supabase.from('listings').insert({
       provider_id: user.id,

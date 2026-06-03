@@ -77,6 +77,12 @@ export default function Nav() {
           {profile && (
             <>
               {isAdmin && navLink('/admin', 'Admin', adminActive)}
+              <Link
+                href="/anbieter/listings/neu"
+                className="text-sm px-4 py-1.5 btn-primary whitespace-nowrap"
+              >
+                Angebot erstellen
+              </Link>
               {navLink('/mein-bereich', 'Konto', kontoActive)}
               <button
                 onClick={handleLogout}
