@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import Nav from '@/components/Nav'
+import BookingChat from '@/components/BookingChat'
 
 const STATUS_LABEL = {
   pending:   { label: 'Ausstehend',     bg: 'bg-amber-100',  text: 'text-amber-700' },
@@ -32,6 +33,8 @@ export default function AnfragenPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirmCancel, setConfirmCancel] = useState(null) // { bookingId, refundCents, amountCents }
+  const [userId, setUserId] = useState(null)
+  const [openChatId, setOpenChatId] = useState(null)
 
   // Review modal state
   const [reviewModal, setReviewModal] = useState(null) // { bookingId, listingTitle }
@@ -46,6 +49,7 @@ export default function AnfragenPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
+      setUserId(user.id)
 
       const { data: profile } = await supabase
         .from('profiles').select('role').eq('id', user.id).single()
@@ -226,7 +230,8 @@ export default function AnfragenPage() {
               const mengeText = formatQuantity(booking)
 
               return (
-                <div key={booking.id} className="bg-white rounded-2xl border border-gray-200 p-5">
+                <div key={booking.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="p-5">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                       {role === 'provider' && booking.event_title && (
@@ -411,6 +416,21 @@ export default function AnfragenPage() {
                       </button>
                     )
                   )}
+
+                  {!['cancelled', 'rejected'].includes(booking.status) && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenChatId(openChatId === booking.id ? null : booking.id)}
+                      className="w-full mt-3 flex items-center justify-center gap-1.5 border border-gray-100 text-gray-400 rounded-xl py-2 text-sm hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                    >
+                      💬 {openChatId === booking.id ? 'Chat schließen' : 'Nachricht schreiben'}
+                    </button>
+                  )}
+                </div>
+
+                {openChatId === booking.id && (
+                  <BookingChat bookingId={booking.id} currentUserId={userId} />
+                )}
                 </div>
               )
             })}
