@@ -12,7 +12,6 @@ export default function RegisterPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -45,7 +44,7 @@ export default function RegisterPage() {
     if (profileError) {
       if (!data.session) {
         trackEvent('user_registered', { role: 'customer' })
-        setEmailSent(true)
+        router.push('/auth/verify-email')
       } else {
         setError(profileError.message)
       }
@@ -55,28 +54,12 @@ export default function RegisterPage() {
 
     trackEvent('user_registered', { role: 'customer' })
     identifyUser(user.id, { role: 'customer' })
-    router.push('/marktplatz')
-  }
 
-  if (emailSent) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="max-w-sm w-full text-center">
-          <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">📬</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">E-Mail bestätigen</h1>
-          <p className="text-gray-500 mb-6">
-            Wir haben dir einen Bestätigungslink geschickt. Nach der Bestätigung kannst du dich{' '}
-            <Link href="/login" className="underline text-gray-900">einloggen</Link>.
-          </p>
-          <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-            Entwicklertipp: In den Supabase-Einstellungen unter Authentication → Providers → Email
-            kannst du &ldquo;Confirm email&rdquo; deaktivieren, damit das Profil sofort angelegt wird.
-          </p>
-        </div>
-      </main>
-    )
+    if (!data.session) {
+      router.push('/auth/verify-email')
+    } else {
+      router.push('/marktplatz')
+    }
   }
 
   return (
