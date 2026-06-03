@@ -154,9 +154,11 @@ export default function Home() {
           </p>
           <Link
             href="/register"
-            className="inline-block bg-white px-8 py-3.5 rounded-full text-base font-semibold gradient-text hover:shadow-xl hover:scale-105 transition-all"
+            className="inline-block bg-white px-8 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all"
           >
-            Jetzt Anbieter werden
+            <span className="bg-gradient-to-r from-[#C026A0] to-[#7C3AED] bg-clip-text text-transparent font-bold text-base">
+              Jetzt Anbieter werden
+            </span>
           </Link>
           <p className="text-pink-200/70 text-sm mt-5">
             Keine Fixkosten — du zahlst nur bei erfolgreicher Buchung.
