@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIEN_FLAT, KATEGORIE_LABEL, SUBKATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { trackEvent } from '@/lib/analytics'
 
+const PAGE_SIZE = 12
+
 const SORTIER_OPTIONEN = [
   { value: 'newest',             label: 'Neueste zuerst' },
   { value: 'neu_14',             label: 'Neu auf Festly' },
@@ -43,10 +45,22 @@ function formatPreisCard(listing) {
   }
 }
 
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  )
+}
+
 export default function FilterSection({ responseByProvider = {} }) {
   const searchParams = useSearchParams()
   const [listings, setListings]       = useState([])
   const [loading, setLoading]         = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore]         = useState(false)
+  const [page, setPage]               = useState(0)
   const [kategorie, setKategorie]     = useState(searchParams.get('kategorie') ?? '')
   const [subkategorie, setSubkategorie] = useState('')
   const [region, setRegion]           = useState('')
@@ -84,8 +98,9 @@ export default function FilterSection({ responseByProvider = {} }) {
     init()
   }, [])
 
-  const fetchListings = useCallback(async () => {
-    setLoading(true)
+  const fetchListings = useCallback(async ({ pageNum = 0, append = false } = {}) => {
+    if (!append) setLoading(true)
+    else setLoadingMore(true)
 
     // Datum-Normalisierung: bei nur "Von" → Einzeltag
     const effectiveFrom = dateFrom || null
@@ -130,6 +145,9 @@ export default function FilterSection({ responseByProvider = {} }) {
       query = query.gte('created_at', cutoff).order('created_at', { ascending: false })
     }
 
+    const from = pageNum * PAGE_SIZE
+    query = query.range(from, from + PAGE_SIZE - 1)
+
     const { data } = await query
     let result = data ?? []
 
@@ -141,32 +159,50 @@ export default function FilterSection({ responseByProvider = {} }) {
       })
     }
 
-    setListings(result)
-    setLoading(false)
-
-    // PostHog-Event (bestehend)
-    if (kategorie || region) {
-      trackEvent('search_performed', {
-        category:      kategorie || null,
-        region:        region    || null,
-        results_count: result.length,
-      })
+    if (append) {
+      setListings(prev => [...prev, ...result])
+    } else {
+      setListings(result)
     }
+    setHasMore(result.length === PAGE_SIZE)
 
-    // search_events — fire & forget, kein UI-Fehler bei Fehlschlag
-    supabase.from('search_events').insert({
-      user_id:         userId ?? null,
-      category:        kategorie    || null,
-      subcategory:     subkategorie || null,
-      region:          region       || null,
-      event_date_from: effectiveFrom,
-      event_date_to:   effectiveTo,
-      results_count:   result.length,
-    }).then(() => {}).catch(() => {})
+    if (!append) setLoading(false)
+    else setLoadingMore(false)
+
+    // Tracking nur beim ersten Laden einer neuen Suche
+    if (!append) {
+      if (kategorie || region) {
+        trackEvent('search_performed', {
+          category:      kategorie || null,
+          region:        region    || null,
+          results_count: result.length,
+        })
+      }
+
+      supabase.from('search_events').insert({
+        user_id:         userId ?? null,
+        category:        kategorie    || null,
+        subcategory:     subkategorie || null,
+        region:          region       || null,
+        event_date_from: effectiveFrom,
+        event_date_to:   effectiveTo,
+        results_count:   result.length,
+      }).then(() => {}).catch(() => {})
+    }
 
   }, [kategorie, subkategorie, region, dateFrom, dateTo, sortierung, responseByProvider, userId])
 
-  useEffect(() => { fetchListings() }, [fetchListings])
+  // Filter-Änderung → Seite zurücksetzen und neu laden
+  useEffect(() => {
+    setPage(0)
+    fetchListings({ pageNum: 0, append: false })
+  }, [fetchListings])
+
+  function handleLoadMore() {
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchListings({ pageNum: nextPage, append: true })
+  }
 
   // Oberkategorie-Klick: Toggle + Subkat-Reset
   function handleKategorieClick(id) {
@@ -343,65 +379,81 @@ export default function FilterSection({ responseByProvider = {} }) {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {listings.map((listing) => (
-            <Link
-              key={listing.id}
-              href={`/angebote/${listing.id}`}
-              className="group hover:scale-[1.01] transition-all duration-200"
-            >
-              {/* Foto 4:3 */}
-              <div className="aspect-[4/3] rounded-xl overflow-hidden mb-3">
-                {listing.photos?.[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={listing.photos[0]}
-                    alt={listing.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-pink-100 to-purple-100">
-                    🎪
-                  </div>
-                )}
-              </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {listings.map((listing) => (
+              <Link
+                key={listing.id}
+                href={`/angebote/${listing.id}`}
+                className="group hover:scale-[1.01] transition-all duration-200"
+              >
+                {/* Foto 4:3 */}
+                <div className="aspect-[4/3] rounded-xl overflow-hidden mb-3">
+                  {listing.photos?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={listing.photos[0]}
+                      alt={listing.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-pink-100 to-purple-100">
+                      🎪
+                    </div>
+                  )}
+                </div>
 
-              {/* Text */}
-              <div className="px-0.5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2.5 py-0.5 font-medium">
-                    {listing.subcategory
-                      ? (SUBKATEGORIE_LABEL[listing.subcategory] ?? listing.subcategory)
-                      : (KATEGORIE_LABEL[listing.category] ?? listing.category)}
-                  </span>
-                  {isNeu(listing) && (
-                    <span
-                      className="text-xs text-white font-semibold px-2 py-0.5 rounded-full"
-                      style={gradientStyle}
-                    >
-                      Neu
+                {/* Text */}
+                <div className="px-0.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2.5 py-0.5 font-medium">
+                      {listing.subcategory
+                        ? (SUBKATEGORIE_LABEL[listing.subcategory] ?? listing.subcategory)
+                        : (KATEGORIE_LABEL[listing.category] ?? listing.category)}
                     </span>
-                  )}
+                    {isNeu(listing) && (
+                      <span
+                        className="text-xs text-white font-semibold px-2 py-0.5 rounded-full"
+                        style={gradientStyle}
+                      >
+                        Neu
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-base font-semibold text-gray-900 leading-snug line-clamp-1">
+                    {listing.title}
+                  </p>
+
+                  <p className="text-sm text-gray-400 mt-0.5 truncate min-h-[1.25rem]">
+                    {listing.description ?? ''}
+                  </p>
+
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-sm font-semibold text-gray-900">{formatPreisCard(listing)}</p>
+                    {listing.region && (
+                      <span className="text-sm text-gray-400">{formatRegion(listing.region)}</span>
+                    )}
+                  </div>
                 </div>
+              </Link>
+            ))}
+          </div>
 
-                <p className="text-base font-semibold text-gray-900 leading-snug line-clamp-1">
-                  {listing.title}
-                </p>
-
-                <p className="text-sm text-gray-400 mt-0.5 truncate min-h-[1.25rem]">
-                  {listing.description ?? ''}
-                </p>
-
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-sm font-semibold text-gray-900">{formatPreisCard(listing)}</p>
-                  {listing.region && (
-                    <span className="text-sm text-gray-400">{formatRegion(listing.region)}</span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+          {/* ── Mehr laden ──────────────────────────────────────────── */}
+          {hasMore && (
+            <div className="flex justify-center mt-10">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+              >
+                {loadingMore ? <Spinner /> : null}
+                {loadingMore ? 'Lade …' : 'Weitere Angebote laden'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </>
   )

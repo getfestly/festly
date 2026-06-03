@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { ADMIN_USER_ID } from '@/lib/admin'
 
 const COMING_SOON_HTML = `<!DOCTYPE html>
 <html lang="de">
@@ -98,7 +99,17 @@ export async function proxy(request) {
 
   // Refresht abgelaufene Sessions und schreibt neue Tokens in die Response-Cookies.
   // Ohne diesen Aufruf sieht createSupabaseServer() in Server Components keine Session.
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Admin-Schutz: serverseitig, bevor die Seite gerendert wird
+  const { pathname } = new URL(request.url)
+  if (pathname.startsWith('/admin')) {
+    if (!user || user.id !== ADMIN_USER_ID) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('error', 'unauthorized')
+      return NextResponse.redirect(loginUrl)
+    }
+  }
 
   return supabaseResponse
 }
