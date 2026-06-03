@@ -62,6 +62,14 @@ export default function Nav() {
         <div className="flex items-center gap-0.5">
           {navLink('/so-funktionierts', "So funktioniert's", howItWorksActive)}
           {navLink('/marktplatz', 'Marktplatz', marktplatzActive)}
+          {profile && (
+            <Link
+              href="/anbieter/listings/neu"
+              className="text-sm px-3 py-1.5 rounded-lg font-medium whitespace-nowrap gradient-text hover:bg-gray-50 transition-colors"
+            >
+              Anbieten
+            </Link>
+          )}
         </div>
 
         {/* Auth-Links */}
@@ -77,12 +85,6 @@ export default function Nav() {
           {profile && (
             <>
               {isAdmin && navLink('/admin', 'Admin', adminActive)}
-              <Link
-                href="/anbieter/listings/neu"
-                className="text-sm px-4 py-1.5 btn-primary whitespace-nowrap"
-              >
-                Angebot erstellen
-              </Link>
               {navLink('/mein-bereich', 'Konto', kontoActive)}
               <button
                 onClick={handleLogout}

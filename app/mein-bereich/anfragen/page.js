@@ -16,7 +16,15 @@ const STATUS_LABEL = {
   cancelled: { label: 'Storniert',     bg: 'bg-gray-100',   text: 'text-gray-500'  },
 }
 
-// Menge leserlich darstellen, z.B. "3 Personen", "2 Stunden"
+const BOOKING_SELECT = `
+  id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
+  quantity, price_model, price_snapshot_cents, updated_at, cancellation_fee_cents,
+  created_at, event_title, event_description,
+  listings(title, category, price_unit_label),
+  customer:profiles!bookings_customer_id_fkey(display_name),
+  provider:profiles!bookings_provider_id_fkey(display_name)
+`
+
 function formatQuantity(booking) {
   const qty = booking.quantity ?? 1
   const unit = booking.listings?.price_unit_label
@@ -30,15 +38,16 @@ function formatQuantity(booking) {
 
 export default function AnfragenPage() {
   const router = useRouter()
-  const [role, setRole] = useState(null)
-  const [bookings, setBookings] = useState([])
+  const [activeTab, setActiveTab] = useState('customer')
+  const [customerBookings, setCustomerBookings] = useState([])
+  const [providerBookings, setProviderBookings] = useState([])
+  const [listingsCount, setListingsCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [confirmCancel, setConfirmCancel] = useState(null) // { bookingId, refundCents, amountCents }
+  const [confirmCancel, setConfirmCancel] = useState(null)
   const [userId, setUserId] = useState(null)
   const [openChatId, setOpenChatId] = useState(null)
 
-  // Review modal state
-  const [reviewModal, setReviewModal] = useState(null) // { bookingId, listingTitle }
+  const [reviewModal, setReviewModal] = useState(null)
   const [reviewedIds, setReviewedIds] = useState(new Set())
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewHovered, setReviewHovered] = useState(0)
@@ -52,37 +61,24 @@ export default function AnfragenPage() {
       if (!user) { router.replace('/login'); return }
       setUserId(user.id)
 
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      setRole(profile?.role)
+      const [customerRes, providerRes, listingsRes] = await Promise.all([
+        supabase.from('bookings').select(BOOKING_SELECT)
+          .eq('customer_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('bookings').select(BOOKING_SELECT)
+          .eq('provider_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('listings').select('id').eq('provider_id', user.id),
+      ])
 
-      const column = profile?.role === 'provider' ? 'provider_id' : 'customer_id'
-      const { data } = await supabase
-        .from('bookings')
-        .select(`
-          id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
-          quantity, price_model, price_snapshot_cents, updated_at, cancellation_fee_cents,
-          created_at, event_title, event_description,
-          listings(title, category, price_unit_label),
-          customer:profiles!bookings_customer_id_fkey(display_name),
-          provider:profiles!bookings_provider_id_fkey(display_name)
-        `)
-        .eq(column, user.id)
-        .order('created_at', { ascending: false })
+      const cBookings = customerRes.data ?? []
+      setCustomerBookings(cBookings)
+      setProviderBookings(providerRes.data ?? [])
+      setListingsCount(listingsRes.data?.length ?? 0)
 
-      setBookings(data ?? [])
-
-      if (profile?.role === 'customer') {
-        const completedIds = (data ?? [])
-          .filter(b => b.status === 'completed')
-          .map(b => b.id)
-        if (completedIds.length > 0) {
-          const { data: existing } = await supabase
-            .from('reviews')
-            .select('booking_id')
-            .in('booking_id', completedIds)
-          setReviewedIds(new Set(existing?.map(r => r.booking_id) ?? []))
-        }
+      const completedIds = cBookings.filter(b => b.status === 'completed').map(b => b.id)
+      if (completedIds.length > 0) {
+        const { data: existing } = await supabase
+          .from('reviews').select('booking_id').in('booking_id', completedIds)
+        setReviewedIds(new Set(existing?.map(r => r.booking_id) ?? []))
       }
 
       setLoading(false)
@@ -124,7 +120,6 @@ export default function AnfragenPage() {
     setReviewModal(null)
   }
 
-  // Anbieter: Annahme/Ablehnung über API (sendet auch E-Mail)
   async function handleStatus(bookingId, newStatus) {
     const res = await fetch(`/api/bookings/${bookingId}/status`, {
       method: 'POST',
@@ -133,8 +128,8 @@ export default function AnfragenPage() {
     })
     const data = await res.json()
     if (!data.error) {
-      setBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
-      const booking = bookings.find(b => b.id === bookingId)
+      setProviderBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
+      const booking = providerBookings.find(b => b.id === bookingId)
       if (newStatus === 'accepted') {
         trackEvent('booking_accepted', { booking_id: bookingId, amount_cents: booking?.amount_cents })
       } else if (newStatus === 'rejected') {
@@ -147,7 +142,7 @@ export default function AnfragenPage() {
     const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' })
     const data = await res.json()
     if (!data.error) {
-      setBookings((b) => b.map((x) => x.id === bookingId
+      setCustomerBookings((b) => b.map((x) => x.id === bookingId
         ? { ...x, status: 'cancelled', cancellation_fee_cents: data.feeCents }
         : x
       ))
@@ -159,7 +154,7 @@ export default function AnfragenPage() {
     const res = await fetch(`/api/bookings/${bookingId}/complete`, { method: 'POST' })
     const data = await res.json()
     if (!data.error) {
-      setBookings((b) => b.map((x) => x.id === bookingId
+      setCustomerBookings((b) => b.map((x) => x.id === bookingId
         ? { ...x, status: 'completed', updated_at: new Date().toISOString() }
         : x
       ))
@@ -177,39 +172,64 @@ export default function AnfragenPage() {
     )
   }
 
+  const isProviderView = activeTab === 'provider'
+  const bookings = isProviderView ? providerBookings : customerBookings
+
+  const tabCls = (tab) =>
+    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+      activeTab === tab
+        ? 'bg-gray-900 text-white'
+        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+    }`
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          {role === 'provider' ? 'Eingegangene Anfragen' : 'Meine Buchungsanfragen'}
-        </h1>
 
-        {role === 'provider' && (
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Anfragen & Buchungen</h1>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 bg-white border border-gray-200 rounded-xl p-1 w-fit">
+          <button className={tabCls('customer')} onClick={() => setActiveTab('customer')}>
+            Als Kunde
+          </button>
+          <button className={tabCls('provider')} onClick={() => setActiveTab('provider')}>
+            Als Anbieter
+          </button>
+        </div>
+
+        {/* Provider-Tab: keine Listings */}
+        {isProviderView && listingsCount === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+              🏷️
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Noch keine Angebote erstellt</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Erstelle dein erstes Angebot, damit Kunden dich buchen können.
+            </p>
             <Link
               href="/anbieter/listings/neu"
-              className="flex items-center gap-2 btn-primary px-5 py-3 text-sm font-medium"
+              className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
             >
-              ➕ Angebot erstellen
+              Erstes Angebot erstellen
             </Link>
           </div>
-        )}
-
-        {bookings.length === 0 ? (
+        ) : bookings.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
               📋
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">
-              {role === 'provider' ? 'Noch keine Anfragen' : 'Keine Buchungsanfragen'}
+              {isProviderView ? 'Noch keine Anfragen' : 'Keine Buchungsanfragen'}
             </h3>
             <p className="text-gray-500 text-sm mb-6">
-              {role === 'provider'
+              {isProviderView
                 ? 'Wenn Kunden deine Angebote anfragen, erscheinen sie hier.'
                 : 'Entdecke Angebote auf dem Marktplatz und stelle deine erste Anfrage.'}
             </p>
-            {role === 'customer' && (
+            {!isProviderView && (
               <Link
                 href="/marktplatz"
                 className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
@@ -238,206 +258,206 @@ export default function AnfragenPage() {
 
               return (
                 <div key={booking.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      {role === 'provider' && booking.event_title && (
-                        <p className="font-bold text-gray-900 mb-0.5">{booking.event_title}</p>
-                      )}
-                      <p className="font-semibold text-gray-900">
-                        {booking.listings?.title ?? 'Gelöschtes Angebot'}
-                      </p>
-                      {role === 'provider' && booking.event_description && (
-                        <p className="text-sm text-gray-400 mt-0.5 line-clamp-2">{booking.event_description}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {role === 'provider'
-                          ? `Kunde: ${booking.customer?.display_name}`
-                          : `Anbieter: ${booking.provider?.display_name}`}
-                      </p>
-                      {mengeText && (
-                        <p className="text-sm text-gray-400 mt-0.5">{mengeText}</p>
-                      )}
-                    </div>
-                    <span className={`text-xs rounded-full px-2.5 py-1 font-medium shrink-0 ${s.bg} ${s.text}`}>
-                      {s.label}
-                    </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-500 mb-3">
-                      Event: <span className="text-gray-900 font-medium">{datum}</span>
-                    </p>
-
-                    {booking.price_model === 'on_request' ? (
-                      <p className="text-sm text-gray-400 italic">Preis auf Anfrage</p>
-                    ) : role === 'provider' ? (
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">
-                          {booking.status === 'completed' ? 'Ausgezahlt' : 'Deine Auszahlung'}
+                        {isProviderView && booking.event_title && (
+                          <p className="font-bold text-gray-900 mb-0.5">{booking.event_title}</p>
+                        )}
+                        <p className="font-semibold text-gray-900">
+                          {booking.listings?.title ?? 'Gelöschtes Angebot'}
                         </p>
-                        <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
-                        {booking.status === 'completed' ? (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Ausgezahlt am {new Date(booking.updated_at).toLocaleDateString('de-DE', {
-                              day: '2-digit', month: 'long', year: 'numeric',
-                            })}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Buchungswert {gesamtpreis}{' '}abzgl. 15&nbsp;% Festly-Gebühr
-                          </p>
+                        {isProviderView && booking.event_description && (
+                          <p className="text-sm text-gray-400 mt-0.5 line-clamp-2">{booking.event_description}</p>
+                        )}
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {isProviderView
+                            ? `Kunde: ${booking.customer?.display_name}`
+                            : `Anbieter: ${booking.provider?.display_name}`}
+                        </p>
+                        {mengeText && (
+                          <p className="text-sm text-gray-400 mt-0.5">{mengeText}</p>
                         )}
                       </div>
-                    ) : (
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Gesamtpreis</p>
-                        <p className="text-xl font-bold text-gray-900">{gesamtpreis}</p>
-                        {booking.price_model === 'flat_plus' && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Grundpreis · Aufpreis für {mengeText ?? 'Einheiten'} folgt vom Anbieter
+                      <span className={`text-xs rounded-full px-2.5 py-1 font-medium shrink-0 ${s.bg} ${s.text}`}>
+                        {s.label}
+                      </span>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-3">
+                        Event: <span className="text-gray-900 font-medium">{datum}</span>
+                      </p>
+
+                      {booking.price_model === 'on_request' ? (
+                        <p className="text-sm text-gray-400 italic">Preis auf Anfrage</p>
+                      ) : isProviderView ? (
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">
+                            {booking.status === 'completed' ? 'Ausgezahlt' : 'Deine Auszahlung'}
                           </p>
+                          <p className="text-2xl font-bold text-gray-900">{auszahlung}</p>
+                          {booking.status === 'completed' ? (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Ausgezahlt am {new Date(booking.updated_at).toLocaleDateString('de-DE', {
+                                day: '2-digit', month: 'long', year: 'numeric',
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Buchungswert {gesamtpreis}{' '}abzgl. 15&nbsp;% Festly-Gebühr
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Gesamtpreis</p>
+                          <p className="text-xl font-bold text-gray-900">{gesamtpreis}</p>
+                          {booking.price_model === 'flat_plus' && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Grundpreis · Aufpreis für {mengeText ?? 'Einheiten'} folgt vom Anbieter
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Anbieter-Aktionen */}
+                    {isProviderView && booking.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStatus(booking.id, 'accepted')}
+                          className="flex-1 bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                        >
+                          Annehmen
+                        </button>
+                        <button
+                          onClick={() => handleStatus(booking.id, 'rejected')}
+                          className="flex-1 border border-red-200 text-red-600 rounded-xl py-2 text-sm font-medium hover:bg-red-50 transition-colors"
+                        >
+                          Ablehnen
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Kunde: Zahlung freigeben */}
+                    {!isProviderView && booking.status === 'paid' && booking.event_date < new Date().toISOString().split('T')[0] && (
+                      <button
+                        onClick={() => handleComplete(booking.id)}
+                        className="w-full bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                      >
+                        Event war super – Zahlung freigeben
+                      </button>
+                    )}
+
+                    {/* Kunde: Jetzt bezahlen */}
+                    {!isProviderView && booking.status === 'accepted' && booking.price_model !== 'on_request' && (
+                      <Link
+                        href={`/buchungen/${booking.id}/bezahlen`}
+                        className="w-full block text-center bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                      >
+                        Jetzt bezahlen
+                      </Link>
+                    )}
+
+                    {/* Kunde: Bezahlt-Badge + Stornieren */}
+                    {!isProviderView && booking.status === 'paid' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
+                            ✓ Bezahlt
+                          </span>
+                        </div>
+                        {confirmCancel?.bookingId === booking.id ? (
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                            <p className="text-sm font-medium text-gray-900">Buchung wirklich stornieren?</p>
+                            <p className="text-sm text-gray-500">
+                              {confirmCancel.refundCents > 0
+                                ? `Du erhältst ${(confirmCancel.refundCents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} zurück (${Math.round(confirmCancel.refundCents / booking.amount_cents * 100)} %).`
+                                : 'Keine Rückerstattung (Event in weniger als 3 Tagen).'}
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleCancel(booking.id)}
+                                className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-700 transition-colors"
+                              >
+                                Stornieren bestätigen
+                              </button>
+                              <button
+                                onClick={() => setConfirmCancel(null)}
+                                className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                              >
+                                Abbrechen
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const daysUntil = Math.floor(
+                                (new Date(booking.event_date) - new Date()) / (1000 * 60 * 60 * 24)
+                              )
+                              let refundCents = 0
+                              if (daysUntil >= 30) refundCents = booking.amount_cents
+                              else if (daysUntil >= 14) refundCents = Math.round(booking.amount_cents * 0.5)
+                              else if (daysUntil >= 3)  refundCents = Math.round(booking.amount_cents * 0.25)
+                              setConfirmCancel({ bookingId: booking.id, refundCents })
+                            }}
+                            className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                          >
+                            Buchung stornieren
+                          </button>
                         )}
                       </div>
                     )}
-                  </div>
 
-                  {role === 'provider' && booking.status === 'pending' && (
-                    <div className="flex gap-2">
+                    {/* Kunde: Storno-Info */}
+                    {!isProviderView && booking.status === 'cancelled' && booking.cancellation_fee_cents != null && (
+                      <p className="text-xs text-gray-400">
+                        {booking.cancellation_fee_cents < booking.amount_cents && booking.amount_cents > 0
+                          ? `Rückerstattet: ${((booking.amount_cents - booking.cancellation_fee_cents) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`
+                          : 'Keine Rückerstattung'}
+                      </p>
+                    )}
+
+                    {/* Kunde: Anfrage zurückziehen */}
+                    {!isProviderView && booking.status === 'pending' && (
                       <button
-                        onClick={() => handleStatus(booking.id, 'accepted')}
-                        className="flex-1 bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
+                        onClick={() => handleCancel(booking.id)}
+                        className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
                       >
-                        Annehmen
+                        Anfrage zurückziehen
                       </button>
-                      <button
-                        onClick={() => handleStatus(booking.id, 'rejected')}
-                        className="flex-1 border border-red-200 text-red-600 rounded-xl py-2 text-sm font-medium hover:bg-red-50 transition-colors"
-                      >
-                        Ablehnen
-                      </button>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Kunde: Zahlung freigeben (Event vorbei, Status bezahlt) */}
-                  {role === 'customer' && booking.status === 'paid' && booking.event_date < new Date().toISOString().split('T')[0] && (
-                    <button
-                      onClick={() => handleComplete(booking.id)}
-                      className="w-full bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
-                    >
-                      Event war super – Zahlung freigeben
-                    </button>
-                  )}
-
-                  {/* Kunde: Jetzt bezahlen (wenn Anbieter angenommen hat) */}
-                  {role === 'customer' && booking.status === 'accepted' && booking.price_model !== 'on_request' && (
-                    <Link
-                      href={`/buchungen/${booking.id}/bezahlen`}
-                      className="w-full block text-center bg-gray-900 text-white rounded-xl py-2 text-sm font-medium hover:bg-gray-700 transition-colors"
-                    >
-                      Jetzt bezahlen
-                    </Link>
-                  )}
-
-                  {/* Kunde: Bezahlt-Badge + Stornieren-Option */}
-                  {role === 'customer' && booking.status === 'paid' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm font-medium">
-                          ✓ Bezahlt
-                        </span>
-                      </div>
-                      {/* Storno-Bestätigungsblock */}
-                      {confirmCancel?.bookingId === booking.id ? (
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-                          <p className="text-sm font-medium text-gray-900">Buchung wirklich stornieren?</p>
-                          <p className="text-sm text-gray-500">
-                            {confirmCancel.refundCents > 0
-                              ? `Du erhältst ${(confirmCancel.refundCents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} zurück (${Math.round(confirmCancel.refundCents / booking.amount_cents * 100)} %).`
-                              : 'Keine Rückerstattung (Event in weniger als 3 Tagen).'}
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleCancel(booking.id)}
-                              className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-700 transition-colors"
-                            >
-                              Stornieren bestätigen
-                            </button>
-                            <button
-                              onClick={() => setConfirmCancel(null)}
-                              className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
-                            >
-                              Abbrechen
-                            </button>
-                          </div>
-                        </div>
+                    {/* Kunde: Bewertung */}
+                    {!isProviderView && booking.status === 'completed' && (
+                      reviewedIds.has(booking.id) ? (
+                        <p className="text-xs text-gray-400 text-center py-1">Bewertung abgegeben ✓</p>
                       ) : (
                         <button
-                          onClick={() => {
-                            const daysUntil = Math.floor(
-                              (new Date(booking.event_date) - new Date()) / (1000 * 60 * 60 * 24)
-                            )
-                            let refundCents = 0
-                            if (daysUntil >= 30) refundCents = booking.amount_cents
-                            else if (daysUntil >= 14) refundCents = Math.round(booking.amount_cents * 0.5)
-                            else if (daysUntil >= 3)  refundCents = Math.round(booking.amount_cents * 0.25)
-                            setConfirmCancel({ bookingId: booking.id, refundCents })
-                          }}
-                          className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                          onClick={() => openReview(booking)}
+                          className="w-full border border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
                         >
-                          Buchung stornieren
+                          Bewertung hinterlassen
                         </button>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
 
-                  {/* Storno-Info wenn abgeschlossen storniert */}
-                  {role === 'customer' && booking.status === 'cancelled' && booking.cancellation_fee_cents != null && (
-                    <p className="text-xs text-gray-400">
-                      {booking.cancellation_fee_cents < booking.amount_cents && booking.amount_cents > 0
-                        ? `Rückerstattet: ${((booking.amount_cents - booking.cancellation_fee_cents) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}`
-                        : 'Keine Rückerstattung'}
-                    </p>
-                  )}
-
-                  {/* Kunde: Anfrage zurückziehen (nur solange pending) */}
-                  {role === 'customer' && booking.status === 'pending' && (
-                    <button
-                      onClick={() => handleCancel(booking.id)}
-                      className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      Anfrage zurückziehen
-                    </button>
-                  )}
-
-                  {/* Kunde: Bewertung abgeben nach Abschluss */}
-                  {role === 'customer' && booking.status === 'completed' && (
-                    reviewedIds.has(booking.id) ? (
-                      <p className="text-xs text-gray-400 text-center py-1">Bewertung abgegeben ✓</p>
-                    ) : (
+                    {!['cancelled', 'rejected'].includes(booking.status) && (
                       <button
-                        onClick={() => openReview(booking)}
-                        className="w-full border border-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                        type="button"
+                        onClick={() => setOpenChatId(openChatId === booking.id ? null : booking.id)}
+                        className="w-full mt-3 flex items-center justify-center gap-1.5 border border-gray-100 text-gray-400 rounded-xl py-2 text-sm hover:bg-gray-50 hover:text-gray-600 transition-colors"
                       >
-                        Bewertung hinterlassen
+                        💬 {openChatId === booking.id ? 'Chat schließen' : 'Nachricht schreiben'}
                       </button>
-                    )
-                  )}
+                    )}
+                  </div>
 
-                  {!['cancelled', 'rejected'].includes(booking.status) && (
-                    <button
-                      type="button"
-                      onClick={() => setOpenChatId(openChatId === booking.id ? null : booking.id)}
-                      className="w-full mt-3 flex items-center justify-center gap-1.5 border border-gray-100 text-gray-400 rounded-xl py-2 text-sm hover:bg-gray-50 hover:text-gray-600 transition-colors"
-                    >
-                      💬 {openChatId === booking.id ? 'Chat schließen' : 'Nachricht schreiben'}
-                    </button>
+                  {openChatId === booking.id && (
+                    <BookingChat bookingId={booking.id} currentUserId={userId} />
                   )}
-                </div>
-
-                {openChatId === booking.id && (
-                  <BookingChat bookingId={booking.id} currentUserId={userId} />
-                )}
                 </div>
               )
             })}

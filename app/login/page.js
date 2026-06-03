@@ -35,7 +35,7 @@ function LoginForm() {
 
     trackEvent('user_logged_in', {})
     identifyUser(data.user.id, { email: data.user.email })
-    router.push('/mein-bereich')
+    router.push('/marktplatz')
   }
 
   return (

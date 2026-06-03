@@ -55,7 +55,7 @@ export default function RegisterPage() {
 
     trackEvent('user_registered', { role: 'customer' })
     identifyUser(user.id, { role: 'customer' })
-    router.push('/mein-bereich')
+    router.push('/marktplatz')
   }
 
   if (emailSent) {

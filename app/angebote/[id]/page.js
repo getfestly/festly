@@ -14,7 +14,6 @@ export default function AngebotDetailPage() {
   const [listing, setListing] = useState(null)
   const [reviews, setReviews] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
-  const [userRole, setUserRole] = useState(null)
   const [hasCompletedBooking, setHasCompletedBooking] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activePhoto, setActivePhoto] = useState(0)
@@ -55,20 +54,14 @@ export default function AngebotDetailPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUser(user)
-        const { data: profile } = await supabase
-          .from('profiles').select('role').eq('id', user.id).single()
-        setUserRole(profile?.role ?? null)
-
-        if (profile?.role === 'customer') {
-          const { data: completed } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('listing_id', id)
-            .eq('customer_id', user.id)
-            .eq('status', 'completed')
-            .maybeSingle()
-          setHasCompletedBooking(!!completed)
-        }
+        const { data: completed } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('listing_id', id)
+          .eq('customer_id', user.id)
+          .eq('status', 'completed')
+          .maybeSingle()
+        setHasCompletedBooking(!!completed)
       } else {
         setCurrentUser(false)
       }
@@ -190,7 +183,7 @@ export default function AngebotDetailPage() {
               </Link>
             </div>
           )}
-          {currentUser && userRole === 'customer' && (
+          {currentUser && (
             <div className="text-center">
               <p className="text-gray-700 font-medium mb-1">Interesse an diesem Angebot?</p>
               <p className="text-gray-400 text-sm mb-4">
@@ -204,11 +197,6 @@ export default function AngebotDetailPage() {
               </Link>
             </div>
           )}
-          {currentUser && userRole === 'provider' && (
-            <p className="text-center text-sm text-gray-400">
-              Als Anbieter kannst du keine Buchungsanfragen stellen.
-            </p>
-          )}
         </div>
 
         {/* Bewertungen */}
@@ -217,7 +205,7 @@ export default function AngebotDetailPage() {
             <h2 className="font-semibold text-gray-900">
               Bewertungen {reviews.length > 0 && `(${reviews.length})`}
             </h2>
-            {currentUser && userRole === 'customer' && (
+            {currentUser && (
               <Link
                 href={`/angebote/${id}/bewerten`}
                 className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
