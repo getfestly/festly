@@ -63,9 +63,6 @@ export default function NeuesListingPage() {
     category: 'fahrgeschaefte',
     subcategory: '',
     vehicle_type: 'pkw_anhaenger',
-    booking_type: 'single',
-    event_date_from: '',
-    event_date_to: '',
     region: '',
     price_model: 'flat',
     priceEuro: '',
@@ -98,16 +95,6 @@ export default function NeuesListingPage() {
   // Kategorie-Wechsel: Subkat zurücksetzen
   function handleCategoryChange(e) {
     setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))
-  }
-
-  // Buchungsart-Wechsel
-  function handleBookingType(type) {
-    setForm((f) => ({
-      ...f,
-      booking_type: type,
-      price_model: type === 'range' ? 'flat' : f.price_model,
-      event_date_to: type === 'single' ? '' : f.event_date_to,
-    }))
   }
 
   function handlePhotoChange(e) {
@@ -175,9 +162,6 @@ export default function NeuesListingPage() {
       await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
     }
 
-    const eventDateFrom = form.event_date_from || null
-    const eventDateTo   = form.booking_type === 'single' ? eventDateFrom : (form.event_date_to || null)
-
     const { error: insertError } = await supabase.from('listings').insert({
       provider_id:      user.id,
       title:            form.title,
@@ -185,8 +169,6 @@ export default function NeuesListingPage() {
       category:         form.category,
       subcategory:      form.subcategory || null,
       vehicle_type:     form.vehicle_type,
-      event_date_from:  eventDateFrom,
-      event_date_to:    eventDateTo,
       price_model:      form.price_model,
       price_cents,
       price_unit_label: form.price_unit_label || null,
@@ -319,61 +301,6 @@ export default function NeuesListingPage() {
             <p className="text-xs text-gray-400 mt-1.5">
               Wird für die automatische Fahrtkosten-Berechnung bei Buchungen verwendet.
             </p>
-          </div>
-
-          {/* Buchungsart */}
-          <div className="border-t border-gray-100 pt-5">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Buchungsart</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { value: 'single', label: 'Einzeltermin',      sub: 'ein Datum' },
-                { value: 'range',  label: 'Zeitraum-Verleih',  sub: 'von – bis' },
-              ].map(({ value, label, sub }) => (
-                <button
-                  key={value} type="button"
-                  onClick={() => handleBookingType(value)}
-                  className={`py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
-                    form.booking_type === value
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {label}
-                  <span className={`block text-xs mt-0.5 ${form.booking_type === value ? 'text-gray-300' : 'text-gray-400'}`}>
-                    {sub}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className={`grid gap-3 mt-3 ${form.booking_type === 'range' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  {form.booking_type === 'range' ? 'Von *' : 'Datum'}
-                </label>
-                <input
-                  type="date" value={form.event_date_from}
-                  onChange={set('event_date_from')}
-                  className={inputCls}
-                />
-              </div>
-              {form.booking_type === 'range' && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Bis *</label>
-                  <input
-                    type="date" value={form.event_date_to}
-                    min={form.event_date_from}
-                    onChange={set('event_date_to')}
-                    className={inputCls}
-                  />
-                </div>
-              )}
-            </div>
-            {form.booking_type === 'range' && (
-              <p className="text-xs text-gray-400 mt-1.5">
-                Bei Zeitraum-Verleih empfehlen wir das Preismodell &ldquo;pro Tag&rdquo;.
-              </p>
-            )}
           </div>
 
           {/* Preismodell */}

@@ -90,10 +90,6 @@ export default function BearbeitenPage() {
         category:         listing.category,
         subcategory:      listing.subcategory ?? '',
         vehicle_type:     listing.vehicle_type ?? 'pkw_anhaenger',
-        booking_type:     listing.event_date_from !== listing.event_date_to && listing.event_date_to
-                            ? 'range' : 'single',
-        event_date_from:  listing.event_date_from ?? '',
-        event_date_to:    listing.event_date_to ?? '',
         region:           listing.region ?? '',
         photos:           listing.photos ?? [],
         price_model:      listing.price_model ?? 'flat',
@@ -108,15 +104,6 @@ export default function BearbeitenPage() {
 
   function handleCategoryChange(e) {
     setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))
-  }
-
-  function handleBookingType(type) {
-    setForm((f) => ({
-      ...f,
-      booking_type: type,
-      price_model: type === 'range' ? 'flat' : f.price_model,
-      event_date_to: type === 'single' ? '' : f.event_date_to,
-    }))
   }
 
   async function removeExistingPhoto(url) {
@@ -188,9 +175,6 @@ export default function BearbeitenPage() {
       ? 0
       : Math.round(parseFloat(form.priceEuro) * 100)
 
-    const eventDateFrom = form.event_date_from || null
-    const eventDateTo   = form.booking_type === 'single' ? eventDateFrom : (form.event_date_to || null)
-
     const { error: updateError } = await supabase
       .from('listings')
       .update({
@@ -199,8 +183,6 @@ export default function BearbeitenPage() {
         category:         form.category,
         subcategory:      form.subcategory || null,
         vehicle_type:     form.vehicle_type,
-        event_date_from:  eventDateFrom,
-        event_date_to:    eventDateTo,
         price_model:      form.price_model,
         price_cents,
         price_unit_label: form.price_unit_label || null,
@@ -337,52 +319,6 @@ export default function BearbeitenPage() {
           </div>
 
           {/* Buchungsart */}
-          <div className="border-t border-gray-100 pt-5">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Buchungsart</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { value: 'single', label: 'Einzeltermin',     sub: 'ein Datum' },
-                { value: 'range',  label: 'Zeitraum-Verleih', sub: 'von – bis' },
-              ].map(({ value, label, sub }) => (
-                <button
-                  key={value} type="button"
-                  onClick={() => handleBookingType(value)}
-                  className={`py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
-                    form.booking_type === value
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {label}
-                  <span className={`block text-xs mt-0.5 ${form.booking_type === value ? 'text-gray-300' : 'text-gray-400'}`}>
-                    {sub}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className={`grid gap-3 mt-3 ${form.booking_type === 'range' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  {form.booking_type === 'range' ? 'Von *' : 'Datum'}
-                </label>
-                <input
-                  type="date" value={form.event_date_from} onChange={set('event_date_from')}
-                  className={inputCls}
-                />
-              </div>
-              {form.booking_type === 'range' && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Bis *</label>
-                  <input
-                    type="date" value={form.event_date_to} min={form.event_date_from}
-                    onChange={set('event_date_to')}
-                    className={inputCls}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Preismodell */}
           <div className="border-t border-gray-100 pt-5">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Preismodell *</label>
