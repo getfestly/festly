@@ -7,11 +7,20 @@ import { KATEGORIEN } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
+const MAX_PHOTOS = 10
+
+function pathFromUrl(url) {
+  const marker = '/listing-photos/'
+  const idx = url.indexOf(marker)
+  return idx !== -1 ? url.slice(idx + marker.length) : null
+}
+
 export default function BearbeitenPage() {
   const router = useRouter()
   const { id } = useParams()
   const [form, setForm] = useState(null)
-  const [photo, setPhoto] = useState(null)
+  const [newPhotos, setNewPhotos] = useState([])      // neu ausgewählte File-Objekte
+  const [newPreviews, setNewPreviews] = useState([])  // object URLs dafür
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
@@ -42,26 +51,51 @@ export default function BearbeitenPage() {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
+  async function removeExistingPhoto(url) {
+    const path = pathFromUrl(url)
+    if (path) {
+      await supabase.storage.from('listing-photos').remove([path])
+    }
+    setForm(f => ({ ...f, photos: f.photos.filter(u => u !== url) }))
+  }
+
+  function handlePhotoChange(e) {
+    const files = Array.from(e.target.files ?? [])
+    const remaining = MAX_PHOTOS - (form.photos.length + newPhotos.length)
+    const toAdd = files.slice(0, remaining)
+    setNewPhotos(prev => [...prev, ...toAdd])
+    setNewPreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))])
+    e.target.value = ''
+  }
+
+  function removeNewPhoto(i) {
+    URL.revokeObjectURL(newPreviews[i])
+    setNewPhotos(prev => prev.filter((_, idx) => idx !== i))
+    setNewPreviews(prev => prev.filter((_, idx) => idx !== i))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    let photos = form.photos
-    if (photo) {
-      const ext = photo.name.split('.').pop()
-      const path = `${user.id}/${Date.now()}.${ext}`
+    const uploadedUrls = []
+    for (let i = 0; i < newPhotos.length; i++) {
+      const file = newPhotos[i]
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `listings/${user.id}/${Date.now()}_${i}_${safeName}`
       const { error: uploadError } = await supabase.storage
-        .from('listing-photos').upload(path, photo)
+        .from('listing-photos').upload(path, file)
       if (uploadError) {
         setError(`Foto-Upload fehlgeschlagen: ${uploadError.message}`)
         setLoading(false)
         return
       }
       const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path)
-      photos = [urlData.publicUrl, ...photos].slice(0, 5)
+      uploadedUrls.push(urlData.publicUrl)
     }
 
+    const photos = [...form.photos, ...uploadedUrls]
     const price_cents = form.price_model === 'on_request'
       ? 0
       : Math.round(parseFloat(form.priceEuro) * 100)
@@ -98,6 +132,7 @@ export default function BearbeitenPage() {
 
   const inputCls = 'w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
   const pm = form.price_model
+  const totalPhotos = form.photos.length + newPhotos.length
 
   const PRICE_CONFIG = {
     flat:       { label: 'Preis pro Tag (€) *',    placeholder: '800.00', unitPlaceholder: null },
@@ -143,7 +178,6 @@ export default function BearbeitenPage() {
             </select>
           </div>
 
-          {/* Preismodell */}
           <div className="border-t border-gray-100 pt-5">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Preismodell *</label>
             <select value={pm} onChange={set('price_model')} className={inputCls}>
@@ -186,7 +220,6 @@ export default function BearbeitenPage() {
             </div>
           )}
 
-          {/* Sonstige Felder */}
           <div className="border-t border-gray-100 pt-5">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
             <input
@@ -195,27 +228,61 @@ export default function BearbeitenPage() {
             />
           </div>
 
-          {form.photos.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vorhandene Fotos</label>
-              <div className="flex gap-2 flex-wrap">
-                {form.photos.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+          {/* Foto-Verwaltung */}
+          <div className="border-t border-gray-100 pt-5">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">Fotos</label>
+              <span className="text-xs text-gray-400">{totalPhotos} / {MAX_PHOTOS}</span>
+            </div>
+
+            {/* Gespeicherte Fotos — mit X zum Löschen */}
+            {form.photos.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {form.photos.map((url) => (
+                  <div key={url} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingPhoto(url)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              {form.photos.length > 0 ? 'Weiteres Foto hinzufügen' : 'Foto (optional)'}
-            </label>
-            <input
-              type="file" accept="image/*"
-              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-            />
+            {/* Neu gewählte Fotos — gestrichelte Border als visueller Hinweis */}
+            {newPreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {newPreviews.map((src, i) => (
+                  <div key={i} className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src} alt=""
+                      className="w-20 h-20 object-cover rounded-xl border-2 border-dashed border-pink-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeNewPhoto(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {totalPhotos < MAX_PHOTOS && (
+              <input
+                type="file" accept="image/*" multiple
+                onChange={handlePhotoChange}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+              />
+            )}
           </div>
 
           {error && (

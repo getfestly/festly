@@ -16,6 +16,7 @@ export default function AngebotDetailPage() {
   const [userRole, setUserRole] = useState(null)
   const [hasCompletedBooking, setHasCompletedBooking] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [activePhoto, setActivePhoto] = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -82,6 +83,7 @@ export default function AngebotDetailPage() {
     )
   }
 
+  const photos = listing.photos ?? []
   const anbieterName = listing.profiles?.display_name ?? 'Unbekannt'
   const preis = formatPreis(listing)
   const preisDetail = formatPreisDetail(listing)
@@ -98,9 +100,34 @@ export default function AngebotDetailPage() {
         </Link>
 
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-5">
-          {listing.photos?.length > 0 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={listing.photos[0]} alt={listing.title} className="w-full h-56 object-cover" />
+          {photos.length > 0 ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photos[activePhoto]}
+                alt={listing.title}
+                className="w-full h-56 object-cover"
+              />
+              {photos.length > 1 && (
+                <div className="flex gap-2 px-3 py-2.5 bg-gray-50 overflow-x-auto">
+                  {photos.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActivePhoto(i)}
+                      className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${
+                        i === activePhoto
+                          ? 'border-pink-500'
+                          : 'border-transparent hover:border-gray-300'
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-5xl text-gray-300">
               🎪
