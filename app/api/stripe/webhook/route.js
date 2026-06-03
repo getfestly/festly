@@ -31,7 +31,7 @@ export async function POST(request) {
       const bookingId = pi.metadata?.booking_id
       if (!bookingId) { console.warn('[webhook] payment_intent.succeeded ohne booking_id'); break }
 
-      await admin.from('bookings').update({ status: 'paid' })
+      await admin.from('bookings').update({ status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', bookingId).eq('status', 'accepted')
       await admin.from('payments').update({ status: 'held', held_at: new Date().toISOString() })
         .eq('stripe_payment_intent_id', pi.id)
