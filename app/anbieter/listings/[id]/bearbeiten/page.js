@@ -250,7 +250,15 @@ export default function BearbeitenPage() {
         <Link href="/anbieter/listings" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zu meinen Angeboten
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Angebot bearbeiten</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Angebot bearbeiten</h1>
+          <Link
+            href={`/anbieter/listings/${id}/verfuegbarkeit`}
+            className="text-sm px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:border-gray-400 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            📅 Verfügbarkeit verwalten
+          </Link>
+        </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
 
