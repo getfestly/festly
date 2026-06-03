@@ -10,16 +10,9 @@ async function fetchPageData() {
   const supabase = await createSupabaseServer()
   const admin = createAdminClient()
 
-  // ── Nutzer + Rolle ────────────────────────────────────────────────────────
+  // ── Nutzer ───────────────────────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser()
-  let userRole = null
-  let userId = null
-  if (user) {
-    userId = user.id
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    userRole = profile?.role ?? null
-  }
+  const userId = user?.id ?? null
 
   // ── Parallele Daten für Rahmen & Badges ───────────────────────────────────
   const [bookingsRes, reviewsRes, respondedRes] = await Promise.all([
@@ -82,7 +75,7 @@ async function fetchPageData() {
     responseByProvider[providerId] = { label, avgHours }
   }
 
-  return { userRole, userId, borderByListing, responseByProvider }
+  return { userId, borderByListing, responseByProvider }
 }
 
 function QuickActions({ role, isAdmin }) {
@@ -108,7 +101,7 @@ function QuickActions({ role, isAdmin }) {
 }
 
 export default async function MarktplatzPage() {
-  const { userRole, userId, borderByListing, responseByProvider } = await fetchPageData()
+  const { userId, borderByListing, responseByProvider } = await fetchPageData()
   const isAdmin = userId === ADMIN_USER_ID
 
   return (
@@ -116,7 +109,7 @@ export default async function MarktplatzPage() {
       <Nav />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
-        <QuickActions role={userRole} isAdmin={isAdmin} />
+        <QuickActions role={userId ? 'user' : null} isAdmin={isAdmin} />
         <Suspense fallback={<div className="flex items-center justify-center py-24 text-gray-400">Lade Angebote …</div>}>
           <FilterSection responseByProvider={responseByProvider} />
         </Suspense>

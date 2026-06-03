@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN_FLAT, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
+import { KATEGORIEN, KATEGORIEN_FLAT, KATEGORIE_LABEL, SUBKATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { trackEvent } from '@/lib/analytics'
 
 const SORTIER_OPTIONEN = [
@@ -45,21 +45,81 @@ function formatPreisCard(listing) {
 
 export default function FilterSection({ responseByProvider = {} }) {
   const searchParams = useSearchParams()
-  const [listings, setListings] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [kategorie, setKategorie] = useState(searchParams.get('kategorie') ?? '')
-  const [region, setRegion] = useState('')
-  const [sortierung, setSortierung] = useState('newest')
+  const [listings, setListings]       = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [kategorie, setKategorie]     = useState(searchParams.get('kategorie') ?? '')
+  const [subkategorie, setSubkategorie] = useState('')
+  const [region, setRegion]           = useState('')
+  const [dateFrom, setDateFrom]       = useState('')
+  const [dateTo, setDateTo]           = useState('')
+  const [sortierung, setSortierung]   = useState('newest')
+  const [userId, setUserId]           = useState(null)
+
+  // Welche Kategorien/Subkategorien haben mind. 1 aktives Listing
+  const [availableCats, setAvailableCats]         = useState(new Set())
+  const [availableSubcats, setAvailableSubcats]   = useState({})
+
+  // Einmalig beim Mount: user + verfügbare Kategorien laden
+  useEffect(() => {
+    async function init() {
+      const [userRes, catRes] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from('listings').select('category, subcategory').eq('is_active', true),
+      ])
+
+      setUserId(userRes.data?.user?.id ?? null)
+
+      const cats = new Set()
+      const subcats = {}
+      for (const { category, subcategory } of catRes.data ?? []) {
+        if (category) cats.add(category)
+        if (category && subcategory) {
+          if (!subcats[category]) subcats[category] = new Set()
+          subcats[category].add(subcategory)
+        }
+      }
+      setAvailableCats(cats)
+      setAvailableSubcats(subcats)
+    }
+    init()
+  }, [])
 
   const fetchListings = useCallback(async () => {
     setLoading(true)
+
+    // Datum-Normalisierung: bei nur "Von" → Einzeltag
+    const effectiveFrom = dateFrom || null
+    const effectiveTo   = dateFrom ? (dateTo || dateFrom) : null
+
+    // Gebuchte Listing-IDs für den Zeitraum ermitteln (fire & silent on error)
+    let bookedIds = []
+    if (effectiveFrom) {
+      try {
+        const { data: booked } = await supabase
+          .from('bookings')
+          .select('listing_id')
+          .in('status', ['accepted', 'paid', 'completed'])
+          .not('listing_id', 'is', null)
+          .gte('event_date', effectiveFrom)
+          .lte('event_date', effectiveTo)
+
+        bookedIds = [...new Set((booked ?? []).map((b) => b.listing_id).filter(Boolean))]
+      } catch {
+        // RLS verhindert ggf. Lesezugriff — Datum-Filter ohne Ausschluss
+      }
+    }
+
     let query = supabase
       .from('listings')
-      .select('id, title, description, category, price_cents, price_model, price_unit_label, region, photos, created_at, provider_id')
+      .select('id, title, description, category, subcategory, price_cents, price_model, price_unit_label, region, photos, created_at, provider_id')
       .eq('is_active', true)
 
-    if (kategorie) query = query.eq('category', kategorie)
-    if (region)    query = query.ilike('region', `%${region}%`)
+    // Filter: Subkategorie hat Vorrang vor Oberkategorie
+    if (subkategorie)      query = query.eq('subcategory', subkategorie)
+    else if (kategorie)    query = query.eq('category', kategorie)
+
+    if (region)            query = query.ilike('region', `%${region}%`)
+    if (bookedIds.length)  query = query.not('id', 'in', `(${bookedIds.join(',')})`)
 
     if (sortierung === 'price_asc')          query = query.order('price_cents', { ascending: true })
     if (sortierung === 'price_desc')         query = query.order('price_cents', { ascending: false })
@@ -84,37 +144,77 @@ export default function FilterSection({ responseByProvider = {} }) {
     setListings(result)
     setLoading(false)
 
+    // PostHog-Event (bestehend)
     if (kategorie || region) {
       trackEvent('search_performed', {
         category:      kategorie || null,
-        region:        region || null,
+        region:        region    || null,
         results_count: result.length,
       })
     }
-  }, [kategorie, region, sortierung, responseByProvider])
+
+    // search_events — fire & forget, kein UI-Fehler bei Fehlschlag
+    supabase.from('search_events').insert({
+      user_id:         userId ?? null,
+      category:        kategorie    || null,
+      subcategory:     subkategorie || null,
+      region:          region       || null,
+      event_date_from: effectiveFrom,
+      event_date_to:   effectiveTo,
+      results_count:   result.length,
+    }).then(() => {}).catch(() => {})
+
+  }, [kategorie, subkategorie, region, dateFrom, dateTo, sortierung, responseByProvider, userId])
 
   useEffect(() => { fetchListings() }, [fetchListings])
 
-  const pillBase = 'flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm whitespace-nowrap font-medium transition-all'
-  const pillActive = 'border-transparent text-white shadow-sm'
+  // Oberkategorie-Klick: Toggle + Subkat-Reset
+  function handleKategorieClick(id) {
+    if (kategorie === id) {
+      setKategorie('')
+      setSubkategorie('')
+    } else {
+      setKategorie(id)
+      setSubkategorie('')
+    }
+  }
+
+  function resetAll() {
+    setKategorie('')
+    setSubkategorie('')
+    setRegion('')
+    setDateFrom('')
+    setDateTo('')
+    setSortierung('newest')
+  }
+
+  const selectedKat = KATEGORIEN.find((k) => k.id === kategorie)
+  const hasSubcats  = selectedKat && (availableSubcats[kategorie]?.size ?? 0) > 0
+  const hasFilter   = kategorie || subkategorie || region || dateFrom || sortierung === 'neu_14'
+
+  const pillBase     = 'flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm whitespace-nowrap font-medium transition-all'
+  const pillActive   = 'border-transparent text-white shadow-sm'
   const pillInactive = 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
   const gradientStyle = { background: 'linear-gradient(to right, #C026A0, #7C3AED)' }
 
+  // Nur Oberkategorien die mind. 1 Listing haben
+  const visibleCats = KATEGORIEN_FLAT.filter((k) => availableCats.has(k.id))
+
   return (
     <>
-      {/* ── Kategorie-Pills ──────────────────────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3 mb-3">
+      {/* ── Oberkategorie-Pills ──────────────────────────────────────── */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-2">
         <button
-          onClick={() => setKategorie('')}
+          onClick={() => { setKategorie(''); setSubkategorie('') }}
           className={`${pillBase} ${kategorie === '' ? pillActive : pillInactive}`}
           style={kategorie === '' ? gradientStyle : {}}
         >
           Alle
         </button>
-        {KATEGORIEN_FLAT.map((k) => (
+        {visibleCats.map((k) => (
           <button
             key={k.id}
-            onClick={() => setKategorie(k.id)}
+            onClick={() => handleKategorieClick(k.id)}
             className={`${pillBase} ${kategorie === k.id ? pillActive : pillInactive}`}
             style={kategorie === k.id ? gradientStyle : {}}
           >
@@ -123,22 +223,82 @@ export default function FilterSection({ responseByProvider = {} }) {
         ))}
       </div>
 
-      {/* ── Region + Sortierung ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 mb-8">
+      {/* ── Unterkategorie-Pills (nur wenn Oberkategorie gewählt + Subkats vorhanden) ── */}
+      {hasSubcats && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3 mb-1 pl-2">
+          <button
+            onClick={() => setSubkategorie('')}
+            className={`${pillBase} text-xs py-1.5 ${subkategorie === '' ? 'border-gray-700 bg-gray-900 text-white' : pillInactive}`}
+          >
+            Alle {selectedKat.label}
+          </button>
+          {selectedKat.subcategories
+            .filter((s) => availableSubcats[kategorie]?.has(s.id))
+            .map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setSubkategorie(subkategorie === s.id ? '' : s.id)}
+                className={`${pillBase} text-xs py-1.5 ${subkategorie === s.id ? 'border-gray-700 bg-gray-900 text-white' : pillInactive}`}
+              >
+                {s.label}
+              </button>
+            ))}
+        </div>
+      )}
+
+      {/* ── Region + Datum + Sortierung ─────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3 mb-8 mt-3">
+        {/* Region */}
         <div className="relative">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none pointer-events-none">
             🔍
           </span>
           <input
             type="text"
-            placeholder="Region suchen …"
+            placeholder="Region …"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             autoComplete="off"
-            className="pl-9 pr-4 py-2 rounded-full border border-gray-300 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent min-w-[180px]"
+            className="pl-9 pr-4 py-2 rounded-full border border-gray-300 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent min-w-[150px]"
           />
         </div>
 
+        {/* Datum Von */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-gray-400 whitespace-nowrap">📅 Von</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); if (!e.target.value) setDateTo('') }}
+            className="border border-gray-300 rounded-full px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+          />
+        </div>
+
+        {/* Datum Bis (nur wenn Von gesetzt) */}
+        {dateFrom && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-gray-400">Bis</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-gray-300 rounded-full px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+            />
+          </div>
+        )}
+
+        {/* Reset (wenn Filter aktiv) */}
+        {hasFilter && (
+          <button
+            onClick={resetAll}
+            className="text-sm text-gray-400 hover:text-gray-700 px-3 py-2 rounded-full border border-gray-200 hover:border-gray-400 transition-colors"
+          >
+            ✕ Reset
+          </button>
+        )}
+
+        {/* Rechts: Anzahl + Sortierung */}
         <div className="ml-auto flex items-center gap-3">
           {!loading && (
             <span className="text-sm text-gray-400">
@@ -157,7 +317,7 @@ export default function FilterSection({ responseByProvider = {} }) {
         </div>
       </div>
 
-      {/* ── Ergebnisse ──────────────────────────────────────────────────── */}
+      {/* ── Ergebnisse ──────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <p className="text-gray-400">Lade Angebote …</p>
@@ -169,13 +329,13 @@ export default function FilterSection({ responseByProvider = {} }) {
           </div>
           <h3 className="font-semibold text-gray-900 mb-2">Keine Angebote gefunden</h3>
           <p className="text-gray-500 text-sm mb-6">
-            {(kategorie || region || sortierung === 'neu_14')
+            {hasFilter
               ? 'Probiere andere Filter oder setze sie zurück.'
               : 'Aktuell gibt es noch keine Angebote auf dem Marktplatz.'}
           </p>
-          {(kategorie || region || sortierung === 'neu_14') && (
+          {hasFilter && (
             <button
-              onClick={() => { setKategorie(''); setRegion(''); setSortierung('newest') }}
+              onClick={resetAll}
               className="text-sm bg-gray-900 text-white rounded-xl px-5 py-2.5 font-medium hover:bg-gray-700 transition-colors"
             >
               Filter zurücksetzen
@@ -208,10 +368,11 @@ export default function FilterSection({ responseByProvider = {} }) {
 
               {/* Text */}
               <div className="px-0.5">
-                {/* Zeile 1: Kategorie + Neu */}
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2.5 py-0.5 font-medium">
-                    {KATEGORIE_LABEL[listing.category] ?? listing.category}
+                    {listing.subcategory
+                      ? (SUBKATEGORIE_LABEL[listing.subcategory] ?? listing.subcategory)
+                      : (KATEGORIE_LABEL[listing.category] ?? listing.category)}
                   </span>
                   {isNeu(listing) && (
                     <span
@@ -223,17 +384,14 @@ export default function FilterSection({ responseByProvider = {} }) {
                   )}
                 </div>
 
-                {/* Zeile 2: Titel */}
                 <p className="text-base font-semibold text-gray-900 leading-snug line-clamp-1">
                   {listing.title}
                 </p>
 
-                {/* Zeile 3: Kurzbeschreibung */}
                 <p className="text-sm text-gray-400 mt-0.5 truncate min-h-[1.25rem]">
                   {listing.description ?? ''}
                 </p>
 
-                {/* Zeile 4: Preis + Region */}
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-sm font-semibold text-gray-900">{formatPreisCard(listing)}</p>
                   {listing.region && (
