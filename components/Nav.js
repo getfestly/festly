@@ -40,7 +40,7 @@ export default function Nav() {
       href={href}
       className={`text-sm px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
         active
-          ? 'bg-gray-100 text-gray-900 font-medium'
+          ? 'bg-purple-50 font-medium gradient-text'
           : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
       }`}
     >
@@ -62,14 +62,6 @@ export default function Nav() {
         <div className="flex items-center gap-0.5">
           {navLink('/so-funktionierts', "So funktioniert's", howItWorksActive)}
           {navLink('/marktplatz', 'Marktplatz', marktplatzActive)}
-          {profile && (
-            <Link
-              href="/anbieter/listings/neu"
-              className="text-sm px-3 py-1.5 rounded-lg font-medium whitespace-nowrap gradient-text hover:bg-gray-50 transition-colors"
-            >
-              Anbieten
-            </Link>
-          )}
         </div>
 
         {/* Auth-Links */}
