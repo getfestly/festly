@@ -21,9 +21,11 @@ export default function ResetPasswordPage() {
     // PKCE-Flow: ?code= Parameter in der URL → Session tauschen
     const code = new URLSearchParams(window.location.search).get('code')
     if (code) {
-      supabase.auth.exchangeCodeForSession(code).catch((e) => {
-        console.error('[reset-password] exchangeCodeForSession fehlgeschlagen:', e)
-      })
+      supabase.auth.exchangeCodeForSession(code)
+        .then(() => setReady(true))
+        .catch((e) => {
+          console.error('[reset-password] exchangeCodeForSession fehlgeschlagen:', e)
+        })
     }
 
     return () => subscription.unsubscribe()
