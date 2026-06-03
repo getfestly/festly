@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import Nav from '@/components/Nav'
 import BookingChat from '@/components/BookingChat'
+import { trackEvent } from '@/lib/analytics'
 
 const STATUS_LABEL = {
   pending:   { label: 'Ausstehend',     bg: 'bg-amber-100',  text: 'text-amber-700' },
@@ -133,6 +134,12 @@ export default function AnfragenPage() {
     const data = await res.json()
     if (!data.error) {
       setBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
+      const booking = bookings.find(b => b.id === bookingId)
+      if (newStatus === 'accepted') {
+        trackEvent('booking_accepted', { booking_id: bookingId, amount_cents: booking?.amount_cents })
+      } else if (newStatus === 'rejected') {
+        trackEvent('booking_rejected', { booking_id: bookingId })
+      }
     }
   }
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { submitBooking } from '@/app/actions/booking'
 import Nav from '@/components/Nav'
+import { trackEvent } from '@/lib/analytics'
 
 const eur = (cents) =>
   (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
@@ -65,6 +66,10 @@ export default function AnfragenPage() {
 
       setUser(user)
       setListing(listing)
+      trackEvent('booking_started', {
+        listing_id:  listing.id,
+        provider_id: listing.provider_id,
+      })
     }
     check()
   }, [listingId, router])
@@ -84,6 +89,11 @@ export default function AnfragenPage() {
     })
 
     if (result.error) { setError(result.error); setLoading(false); return }
+    trackEvent('booking_submitted', {
+      listing_id:   listingId,
+      amount_cents: amountCents,
+      price_model:  listing.price_model,
+    })
     router.push('/mein-bereich/anfragen')
   }
 

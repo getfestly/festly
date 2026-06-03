@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
+import { trackEvent } from '@/lib/analytics'
 import { formatPreis, formatPreisDetail } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
@@ -29,6 +30,11 @@ export default function AngebotDetailPage() {
 
       if (!listing) { router.replace('/marktplatz'); return }
       setListing(listing)
+      trackEvent('listing_detail_viewed', {
+        listing_id:  listing.id,
+        category:    listing.category,
+        provider_id: listing.provider_id,
+      })
 
       const { data: bookingIds } = await supabase
         .from('bookings')

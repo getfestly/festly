@@ -1,8 +1,9 @@
 'use client'
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Nav from '@/components/Nav'
+import { trackEvent } from '@/lib/analytics'
 
 // useSearchParams benötigt Suspense-Grenze
 function DankeContent() {
@@ -11,6 +12,12 @@ function DankeContent() {
   const status = searchParams.get('redirect_status')
 
   const success = status === 'succeeded'
+
+  useEffect(() => {
+    if (success) {
+      trackEvent('payment_completed', { booking_id: bookingId })
+    }
+  }, [success, bookingId])
 
   return (
     <div className="min-h-screen bg-gray-50">

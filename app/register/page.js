@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { trackEvent, identifyUser } from '@/lib/analytics'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -43,6 +44,7 @@ export default function RegisterPage() {
 
     if (profileError) {
       if (!data.session) {
+        trackEvent('user_registered', { role: form.role })
         setEmailSent(true)
       } else {
         setError(profileError.message)
@@ -51,6 +53,8 @@ export default function RegisterPage() {
       return
     }
 
+    trackEvent('user_registered', { role: form.role })
+    identifyUser(user.id, { role: form.role })
     router.push('/mein-bereich')
   }
 

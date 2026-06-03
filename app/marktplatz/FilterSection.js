@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
+import { trackEvent } from '@/lib/analytics'
 
 const SORTIER_OPTIONEN = [
   { value: 'newest',             label: 'Neueste zuerst' },
@@ -85,6 +86,14 @@ export default function FilterSection({ responseByProvider = {} }) {
 
     setListings(result)
     setLoading(false)
+
+    if (kategorie || region) {
+      trackEvent('search_performed', {
+        category:      kategorie || null,
+        region:        region || null,
+        results_count: result.length,
+      })
+    }
   }, [kategorie, region, sortierung, responseByProvider])
 
   useEffect(() => { fetchListings() }, [fetchListings])

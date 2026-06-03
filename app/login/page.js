@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { trackEvent, identifyUser } from '@/lib/analytics'
 
 function LoginForm() {
   const router = useRouter()
@@ -32,6 +33,8 @@ function LoginForm() {
       return
     }
 
+    trackEvent('user_logged_in', {})
+    identifyUser(data.user.id, { email: data.user.email })
     router.push('/mein-bereich')
   }
 
