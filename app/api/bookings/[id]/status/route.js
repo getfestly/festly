@@ -19,7 +19,7 @@ export async function POST(request, { params }) {
   // Buchung laden — nur Anbieter darf Accept/Reject
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, status, event_date, amount_cents, customer_id, provider_id, listings(title)')
+    .select('id, status, event_date, amount_cents, customer_id, provider_id, listings(title, vehicle_type)')
     .eq('id', bookingId)
     .eq('provider_id', user.id)    // Nur eigene Buchungen
     .eq('status', 'pending')       // Nur aus "pending" heraus
@@ -59,6 +59,7 @@ export async function POST(request, { params }) {
         eventDate,
         amount_cents: booking.amount_cents,
         bookingId,
+        vehicle_type: booking.listings?.vehicle_type ?? null,
       })
     } else {
       await sendBookingRejected({
