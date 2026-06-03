@@ -58,6 +58,7 @@ function LoginForm() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">E-Mail</label>
             <input
               type="email" required value={form.email} onChange={set('email')}
+              autoComplete="email"
               placeholder="name@beispiel.de"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -72,6 +73,7 @@ function LoginForm() {
             </div>
             <input
               type="password" required value={form.password} onChange={set('password')}
+              autoComplete="current-password"
               placeholder="Dein Passwort"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />

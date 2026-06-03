@@ -130,6 +130,7 @@ export default function NeuesListingPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel *</label>
             <input
               type="text" required value={form.title} onChange={set('title')}
+              autoComplete="off"
               placeholder="z.B. DJ-Set für bis zu 200 Personen"
               className={inputCls}
             />
@@ -139,6 +140,7 @@ export default function NeuesListingPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Beschreibung</label>
             <textarea
               rows={4} value={form.description} onChange={set('description')}
+              autoComplete="off"
               placeholder="Beschreibe deine Leistung, Ausstattung, besondere Merkmale …"
               className={`${inputCls} resize-none`}
             />
@@ -205,6 +207,7 @@ export default function NeuesListingPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
             <input
               type="text" value={form.region} onChange={set('region')}
+              autoComplete="address-level1"
               placeholder="z.B. Bayern, Berlin, deutschlandweit"
               className={inputCls}
             />

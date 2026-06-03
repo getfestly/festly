@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Nav from '@/components/Nav'
 import { KATEGORIEN } from '@/lib/constants'
 
 const KATEGORIE_EMOJIS = {
@@ -35,6 +36,7 @@ const STEPS = [
 export default function Home() {
   return (
     <main className="flex-1">
+      <Nav />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section
@@ -65,7 +67,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-8 text-sm text-gray-400">
             <span>✓ Sicher bezahlt via Stripe</span>
             <span className="hidden sm:inline text-gray-300">·</span>
-            <span>✓ Kostenlos anfragen</span>
+            <span>✓ Unverbindlich anfragen</span>
             <span className="hidden sm:inline text-gray-300">·</span>
             <span>✓ Nur bei Buchung zahlen</span>
           </div>

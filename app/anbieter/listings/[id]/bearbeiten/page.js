@@ -157,6 +157,7 @@ export default function BearbeitenPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel *</label>
             <input
               type="text" required value={form.title} onChange={set('title')}
+              autoComplete="off"
               className={inputCls}
             />
           </div>
@@ -165,6 +166,7 @@ export default function BearbeitenPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Beschreibung</label>
             <textarea
               rows={4} value={form.description} onChange={set('description')}
+              autoComplete="off"
               className={`${inputCls} resize-none`}
             />
           </div>
@@ -224,6 +226,7 @@ export default function BearbeitenPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
             <input
               type="text" value={form.region} onChange={set('region')}
+              autoComplete="address-level1"
               className={inputCls}
             />
           </div>

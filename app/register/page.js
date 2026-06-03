@@ -92,6 +92,7 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Anzeigename</label>
             <input
               type="text" required value={form.displayName} onChange={set('displayName')}
+              autoComplete="name"
               placeholder="Dein Name oder Firmenname"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -101,6 +102,7 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">E-Mail</label>
             <input
               type="email" required value={form.email} onChange={set('email')}
+              autoComplete="email"
               placeholder="name@beispiel.de"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -110,6 +112,7 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Passwort</label>
             <input
               type="password" required minLength={6} value={form.password} onChange={set('password')}
+              autoComplete="new-password"
               placeholder="Mindestens 6 Zeichen"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />

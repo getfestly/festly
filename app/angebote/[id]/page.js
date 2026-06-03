@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIE_LABEL } from '@/lib/constants'
+import { KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { formatPreis, formatPreisDetail } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
@@ -165,7 +165,7 @@ export default function AngebotDetailPage() {
             <div className="flex flex-wrap gap-4 text-sm text-gray-500 pt-4 border-t border-gray-100">
               <span>Anbieter: <span className="text-gray-900 font-medium">{anbieterName}</span></span>
               {listing.region && (
-                <span>Region: <span className="text-gray-900 font-medium">{listing.region}</span></span>
+                <span>Region: <span className="text-gray-900 font-medium">{formatRegion(listing.region)}</span></span>
               )}
             </div>
           </div>

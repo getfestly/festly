@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN, KATEGORIE_LABEL } from '@/lib/constants'
+import { KATEGORIEN, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { formatPreis } from '@/lib/pricing'
 
 const SORTIER_OPTIONEN = [
@@ -187,7 +187,7 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
                   <div className="flex items-center justify-between mt-3">
                     <p className="font-bold text-gray-900">{formatPreis(listing)}</p>
                     {listing.region && (
-                      <span className="text-xs text-gray-400">{listing.region}</span>
+                      <span className="text-xs text-gray-400">{formatRegion(listing.region)}</span>
                     )}
                   </div>
                 </div>
