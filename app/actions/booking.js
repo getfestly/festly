@@ -16,7 +16,7 @@ function calcAmountCents(priceModel, priceCents, quantity) {
   }
 }
 
-export async function submitBooking({ listingId, eventDate, quantity }) {
+export async function submitBooking({ listingId, eventDate, quantity, eventTitle, eventDescription }) {
   const supabase = await createSupabaseServer()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -49,8 +49,10 @@ export async function submitBooking({ listingId, eventDate, quantity }) {
     price_model:          listing.price_model ?? 'flat',
     price_snapshot_cents: listing.price_cents,
     amount_cents,
-    commission_cents:     0,
+    commission_cents:      0,
     provider_payout_cents: 0,
+    event_title:           eventTitle || null,
+    event_description:     eventDescription || null,
   })
 
   if (insertError) return { error: insertError.message }

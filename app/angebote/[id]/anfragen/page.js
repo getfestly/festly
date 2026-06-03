@@ -39,6 +39,8 @@ export default function AnfragenPage() {
   const [listing, setListing] = useState(null)
   const [eventDate, setEventDate] = useState('')
   const [quantity, setQuantity] = useState('1')
+  const [eventTitle, setEventTitle] = useState('')
+  const [eventDescription, setEventDescription] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
@@ -77,6 +79,8 @@ export default function AnfragenPage() {
       listingId,
       eventDate,
       quantity,
+      eventTitle,
+      eventDescription,
     })
 
     if (result.error) { setError(result.error); setLoading(false); return }
@@ -168,6 +172,37 @@ export default function AnfragenPage() {
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
               className={inputCls}
+            />
+          </div>
+
+          {/* Event-Titel */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Wie heißt dein Event? *
+            </label>
+            <input
+              type="text"
+              required
+              maxLength={100}
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              placeholder="z.B. Hochzeit, Geburtstag, Firmenfest, Stadtfest..."
+              className={inputCls}
+            />
+          </div>
+
+          {/* Event-Beschreibung */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Beschreibe dein Event
+            </label>
+            <textarea
+              rows={3}
+              maxLength={1000}
+              value={eventDescription}
+              onChange={(e) => setEventDescription(e.target.value)}
+              placeholder="Erzähl dem Anbieter mehr: Wie viele Gäste erwartest du? Was ist der Anlass? Gibt es besondere Wünsche oder wichtige Details?"
+              className={`${inputCls} resize-none`}
             />
           </div>
 

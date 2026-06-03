@@ -57,7 +57,7 @@ export default function AnfragenPage() {
         .select(`
           id, status, event_date, amount_cents, commission_cents, provider_payout_cents,
           quantity, price_model, price_snapshot_cents, updated_at, cancellation_fee_cents,
-          created_at,
+          created_at, event_title, event_description,
           listings(title, category, price_unit_label),
           customer:profiles!bookings_customer_id_fkey(display_name),
           provider:profiles!bookings_provider_id_fkey(display_name)
@@ -229,9 +229,15 @@ export default function AnfragenPage() {
                 <div key={booking.id} className="bg-white rounded-2xl border border-gray-200 p-5">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
+                      {role === 'provider' && booking.event_title && (
+                        <p className="font-bold text-gray-900 mb-0.5">{booking.event_title}</p>
+                      )}
                       <p className="font-semibold text-gray-900">
                         {booking.listings?.title ?? 'Gelöschtes Angebot'}
                       </p>
+                      {role === 'provider' && booking.event_description && (
+                        <p className="text-sm text-gray-400 mt-0.5 line-clamp-2">{booking.event_description}</p>
+                      )}
                       <p className="text-sm text-gray-500 mt-0.5">
                         {role === 'provider'
                           ? `Kunde: ${booking.customer?.display_name}`
