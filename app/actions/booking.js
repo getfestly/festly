@@ -3,6 +3,7 @@
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { sendNewBookingToProvider } from '@/lib/email'
+import { validateNoContact } from '@/lib/contentFilter'
 
 function calcAmountCents(priceModel, priceCents, quantity) {
   const qty = Math.max(1, parseInt(quantity) || 1)
@@ -21,6 +22,11 @@ export async function submitBooking({ listingId, eventDate, quantity, eventTitle
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Nicht eingeloggt.' }
+
+  const contactErr =
+    validateNoContact(eventTitle) ??
+    validateNoContact(eventDescription)
+  if (contactErr) return { error: contactErr }
 
   const { data: profile } = await supabase
     .from('profiles').select('role, display_name').eq('id', user.id).single()

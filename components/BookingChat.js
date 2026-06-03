@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-
-// Fängt E-Mails (@), URLs (http/www), tel:-Schema und Telefonnummern-Muster
-const CONTACT_RE = /@|https?:\/\/|www\.|tel:|mailto:|\d{7,}|\+\d[\d\s]{8,}|\b0\d[\d\s\-\/]{5,}/i
+import { validateNoContact } from '@/lib/contentFilter'
 
 function formatTime(ts) {
   const d = new Date(ts)
@@ -62,8 +60,9 @@ export default function BookingChat({ bookingId, currentUserId }) {
     const trimmed = text.trim()
     if (!trimmed || sending) return
 
-    if (CONTACT_RE.test(trimmed)) {
-      setChatError('Bitte teile keine Kontaktdaten. Nutze Festly für die gesamte Kommunikation.')
+    const contactErr = validateNoContact(trimmed)
+    if (contactErr) {
+      setChatError(contactErr)
       return
     }
     setChatError(null)
