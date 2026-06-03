@@ -148,7 +148,7 @@ export default function Home() {
             Biete deine Leistung an
           </h2>
           <p className="text-pink-100 mb-10 text-base leading-relaxed">
-            Kostenlos inserieren, nur bei Buchung zahlen — 15 % Provision, fair und transparent.
+            Biete deine Leistung Tausenden von Veranstaltern an — ohne Risiko.
           </p>
           <Link
             href="/register"
@@ -156,6 +156,9 @@ export default function Home() {
           >
             Jetzt Anbieter werden
           </Link>
+          <p className="text-pink-200/70 text-sm mt-5">
+            Keine Fixkosten — du zahlst nur bei erfolgreicher Buchung.
+          </p>
         </div>
       </section>
 

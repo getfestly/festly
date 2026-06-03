@@ -115,8 +115,8 @@ export default function SoFunktioniertPage() {
             <Divider />
             <Step icon="💰" title="Auszahlung nach Event-Freigabe">
               Sobald der Kunde dein Event bestätigt (oder 7 Tage nach dem Event verstrichen
-              sind), erhältst du <strong className="text-gray-900">85 % des Buchungswerts</strong> direkt auf dein
-              Bankkonto. Die restlichen 15 % sind die Festly-Provision.
+              sind), erhältst du deine Auszahlung direkt auf dein Bankkonto.
+              Deine Auszahlung siehst du transparent bei jeder Anfrage — abzüglich der Plattformgebühr.
             </Step>
             <Divider />
             <Step icon="🏦" title="Stripe Connect Onboarding">

@@ -195,6 +195,12 @@ export default function NeuesListingPage() {
             </div>
           )}
 
+          {pm !== 'on_request' && (
+            <p className="text-xs text-gray-400 -mt-2">
+              Bei Buchung wird eine Plattformgebühr fällig. Deine Auszahlung siehst du bei jeder Anfrage.
+            </p>
+          )}
+
           <div className="border-t border-gray-100 pt-5">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
             <input

@@ -52,10 +52,9 @@ export default function AgbPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">§ 5 Provision</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">§ 5 Plattformgebühr</h2>
             <p className="leading-relaxed">
-              Festly erhebt eine Plattformprovision von 15 % auf den Buchungsbetrag.
-              [Weitere Details zur Fälligkeit und Abrechnung]
+              Festly erhebt für jede erfolgreich vermittelte Buchung eine Plattformgebühr in Höhe von 15 % des Buchungswertes (inkl. MwSt.). Die Gebühr wird automatisch bei der Auszahlung an den Anbieter verrechnet. Der Anbieter erhält 85 % des vom Kunden bezahlten Buchungsbetrages. Die Plattformgebühr entsteht mit Annahme der Buchungsanfrage durch den Anbieter und Zahlungseingang des Kunden.
             </p>
           </section>
 

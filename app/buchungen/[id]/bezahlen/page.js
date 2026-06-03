@@ -46,7 +46,7 @@ function CheckoutForm({ bookingId, amount_cents }) {
       <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
         <p className="text-sm text-gray-500 mb-1">Zu zahlender Betrag</p>
         <p className="text-2xl font-bold text-gray-900">{eur(amount_cents)}</p>
-        <p className="text-xs text-gray-400 mt-1">Inkl. 15 % Festly-Provision</p>
+        <p className="text-xs text-gray-400 mt-1">Sicher bezahlt via Stripe — Treuhand bis zur Event-Freigabe</p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-4">

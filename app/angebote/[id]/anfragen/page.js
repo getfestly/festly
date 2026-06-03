@@ -141,7 +141,7 @@ export default function AnfragenPage() {
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Inkl. 15&nbsp;% Festly-Provision — Zahlung erst nach Annahme durch den Anbieter
+                Zahlung erst nach Annahme durch den Anbieter — abzgl. Plattformgebühr
               </p>
             </div>
           )}
