@@ -116,14 +116,11 @@ export default async function MarktplatzPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Nav />
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
         <QuickActions role={userRole} isAdmin={isAdmin} />
         <Suspense fallback={<div className="flex items-center justify-center py-24 text-gray-400">Lade Angebote …</div>}>
-          <FilterSection
-            borderByListing={borderByListing}
-            responseByProvider={responseByProvider}
-          />
+          <FilterSection responseByProvider={responseByProvider} />
         </Suspense>
       </main>
     </div>

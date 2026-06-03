@@ -56,3 +56,12 @@ input::placeholder,
 textarea::placeholder {
   color: #9ca3af;
 }
+
+/* Scrollbar verstecken (für horizontale Kategorie-Pills) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

@@ -4,15 +4,24 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
-import { formatPreis } from '@/lib/pricing'
 
 const SORTIER_OPTIONEN = [
-  { value: 'newest',           label: 'Neueste zuerst' },
-  { value: 'neu_14',           label: 'Neu auf Festly' },
+  { value: 'newest',             label: 'Neueste zuerst' },
+  { value: 'neu_14',             label: 'Neu auf Festly' },
   { value: 'schnellste_antwort', label: 'Schnellste Antwort' },
-  { value: 'price_asc',        label: 'Preis aufsteigend' },
-  { value: 'price_desc',       label: 'Preis absteigend' },
+  { value: 'price_asc',          label: 'Preis aufsteigend' },
+  { value: 'price_desc',         label: 'Preis absteigend' },
 ]
+
+const KATEGORIE_EMOJIS = {
+  food:       '🍽️',
+  ride:       '🎡',
+  music:      '🎵',
+  sanitation: '🚿',
+  tech:       '💡',
+  rental:     '📦',
+  other:      '✨',
+}
 
 const NEU_MS = 14 * 24 * 60 * 60 * 1000
 
@@ -21,15 +30,22 @@ function isNeu(listing) {
     Date.now() - new Date(listing.created_at).getTime() < NEU_MS
 }
 
-function getBorderClass(listing, borderByListing) {
-  const b = borderByListing[listing.id]
-  if (b === 'gold')   return 'border-2 border-yellow-400 hover:border-yellow-500'
-  if (b === 'orange') return 'border-2 border-orange-300 hover:border-orange-400'
-  if (isNeu(listing)) return 'border-2 border-blue-300  hover:border-blue-400'
-  return 'border border-gray-200 hover:border-gray-300'
+const eur = (cents) =>
+  (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+
+function formatPreisCard(listing) {
+  const { price_model, price_cents, price_unit_label } = listing ?? {}
+  switch (price_model) {
+    case 'flat':       return `${eur(price_cents)}/Tag`
+    case 'per_person': return `ab ${eur(price_cents)}/${price_unit_label ?? 'Person'}`
+    case 'flat_plus':  return `${eur(price_cents)} Grundpreis`
+    case 'hourly':     return `ab ${eur(price_cents)}/${price_unit_label ?? 'Std.'}`
+    case 'on_request': return 'Auf Anfrage'
+    default:           return price_cents ? eur(price_cents) : '–'
+  }
 }
 
-export default function FilterSection({ borderByListing = {}, responseByProvider = {} }) {
+export default function FilterSection({ responseByProvider = {} }) {
   const searchParams = useSearchParams()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -73,28 +89,49 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
 
   useEffect(() => { fetchListings() }, [fetchListings])
 
+  const pillBase = 'flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm whitespace-nowrap font-medium transition-all'
+  const pillActive = 'border-transparent text-white shadow-sm'
+  const pillInactive = 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
+  const gradientStyle = { background: 'linear-gradient(to right, #C026A0, #7C3AED)' }
+
   return (
     <>
-      {/* Filter-Leiste */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-3">
-        <select
-          value={kategorie}
-          onChange={(e) => setKategorie(e.target.value)}
-          className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      {/* ── Kategorie-Pills ──────────────────────────────────────────────── */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3 mb-3">
+        <button
+          onClick={() => setKategorie('')}
+          className={`${pillBase} ${kategorie === '' ? pillActive : pillInactive}`}
+          style={kategorie === '' ? gradientStyle : {}}
         >
-          <option value="">Alle Kategorien</option>
-          {KATEGORIEN.map((k) => (
-            <option key={k.value} value={k.value}>{k.label}</option>
-          ))}
-        </select>
+          Alle
+        </button>
+        {KATEGORIEN.map((k) => (
+          <button
+            key={k.value}
+            onClick={() => setKategorie(k.value)}
+            className={`${pillBase} ${kategorie === k.value ? pillActive : pillInactive}`}
+            style={kategorie === k.value ? gradientStyle : {}}
+          >
+            {KATEGORIE_EMOJIS[k.value]} {k.label}
+          </button>
+        ))}
+      </div>
 
-        <input
-          type="text"
-          placeholder="Region suchen …"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[160px]"
-        />
+      {/* ── Region + Sortierung ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3 mb-8">
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none pointer-events-none">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Region suchen …"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            autoComplete="off"
+            className="pl-9 pr-4 py-2 rounded-full border border-gray-300 text-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent min-w-[180px]"
+          />
+        </div>
 
         <div className="ml-auto flex items-center gap-3">
           {!loading && (
@@ -105,7 +142,7 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
           <select
             value={sortierung}
             onChange={(e) => setSortierung(e.target.value)}
-            className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mr-1"
+            className="border border-gray-300 rounded-full px-4 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
           >
             {SORTIER_OPTIONEN.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -114,7 +151,7 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
         </div>
       </div>
 
-      {/* Ergebnisse */}
+      {/* ── Ergebnisse ──────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <p className="text-gray-400">Lade Angebote …</p>
@@ -140,60 +177,66 @@ export default function FilterSection({ borderByListing = {}, responseByProvider
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {listings.map((listing) => {
-            const responseInfo = listing.provider_id ? responseByProvider[listing.provider_id] : null
-            return (
-              <Link
-                key={listing.id}
-                href={`/angebote/${listing.id}`}
-                className={`bg-white rounded-2xl overflow-hidden hover:shadow-md transition-all group ${getBorderClass(listing, borderByListing)}`}
-              >
-                <div className="relative h-40 bg-gray-100 overflow-hidden">
-                  {listing.photos?.[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={listing.photos[0]}
-                      alt={listing.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
-                      🎪
-                    </div>
-                  )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {listings.map((listing) => (
+            <Link
+              key={listing.id}
+              href={`/angebote/${listing.id}`}
+              className="group hover:scale-[1.01] transition-all duration-200"
+            >
+              {/* Foto 4:3 */}
+              <div className="aspect-[4/3] rounded-xl overflow-hidden mb-3">
+                {listing.photos?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={listing.photos[0]}
+                    alt={listing.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-pink-100 to-purple-100">
+                    🎪
+                  </div>
+                )}
+              </div>
+
+              {/* Text */}
+              <div className="px-0.5">
+                {/* Zeile 1: Kategorie + Neu */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2.5 py-0.5 font-medium">
+                    {KATEGORIE_LABEL[listing.category] ?? listing.category}
+                  </span>
                   {isNeu(listing) && (
                     <span
-                      className="absolute top-2 left-2 text-white text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: 'linear-gradient(to right, #C026A0, #7C3AED)' }}
+                      className="text-xs text-white font-semibold px-2 py-0.5 rounded-full"
+                      style={gradientStyle}
                     >
                       Neu
                     </span>
                   )}
                 </div>
-                <div className="p-4">
-                  <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
-                    {KATEGORIE_LABEL[listing.category] ?? listing.category}
-                  </span>
-                  <p className="font-semibold text-gray-900 leading-snug mt-2 line-clamp-2">
-                    {listing.title}
-                  </p>
-                  {listing.description && (
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{listing.description}</p>
+
+                {/* Zeile 2: Titel */}
+                <p className="text-base font-semibold text-gray-900 leading-snug line-clamp-1">
+                  {listing.title}
+                </p>
+
+                {/* Zeile 3: Kurzbeschreibung */}
+                <p className="text-sm text-gray-400 mt-0.5 truncate min-h-[1.25rem]">
+                  {listing.description ?? ''}
+                </p>
+
+                {/* Zeile 4: Preis + Region */}
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-sm font-semibold text-gray-900">{formatPreisCard(listing)}</p>
+                  {listing.region && (
+                    <span className="text-sm text-gray-400">{formatRegion(listing.region)}</span>
                   )}
-                  {responseInfo && (
-                    <p className="text-xs text-gray-400 mt-1.5">{responseInfo.label}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-3">
-                    <p className="font-bold text-gray-900">{formatPreis(listing)}</p>
-                    {listing.region && (
-                      <span className="text-xs text-gray-400">{formatRegion(listing.region)}</span>
-                    )}
-                  </div>
                 </div>
-              </Link>
-            )
-          })}
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </>
