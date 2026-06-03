@@ -17,7 +17,7 @@ function calcAmountCents(priceModel, priceCents, quantity) {
   }
 }
 
-export async function submitBooking({ listingId, eventDate, quantity, eventTitle, eventDescription }) {
+export async function submitBooking({ listingId, eventDate, quantity, eventTitle, eventDescription, transportCents = 0 }) {
   const supabase = await createSupabaseServer()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,8 +29,7 @@ export async function submitBooking({ listingId, eventDate, quantity, eventTitle
   if (contactErr) return { error: contactErr }
 
   const { data: profile } = await supabase
-    .from('profiles').select('role, display_name').eq('id', user.id).single()
-  if (profile?.role !== 'customer') return { error: 'Nur Kunden können Buchungsanfragen stellen.' }
+    .from('profiles').select('display_name').eq('id', user.id).single()
 
   const { data: listing } = await supabase
     .from('listings')
@@ -43,7 +42,8 @@ export async function submitBooking({ listingId, eventDate, quantity, eventTitle
   if (listing.provider_id === user.id) return { error: 'Du kannst dein eigenes Angebot nicht anfragen.' }
 
   const qty = Math.max(1, parseInt(quantity) || 1)
-  const amount_cents = calcAmountCents(listing.price_model, listing.price_cents, qty)
+  const transport = Math.max(0, parseInt(transportCents) || 0)
+  const amount_cents = calcAmountCents(listing.price_model, listing.price_cents, qty) + transport
 
   const { error: insertError } = await supabase.from('bookings').insert({
     listing_id:           listing.id,
