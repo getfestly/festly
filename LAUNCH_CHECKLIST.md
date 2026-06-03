@@ -1,5 +1,10 @@
 # Festly Launch Checklist
 
+## Supabase
+- [ ] Auth → E-Mail-Verifizierung aktivieren (war fürs Testen deaktiviert)
+- [ ] Auth → Site URL auf https://festly.de setzen
+- [ ] Auth → Redirect URLs: https://festly.de/auth/reset-password
+
 ## Vercel Deployment
 - [ ] Repository mit Vercel verbinden
 - [ ] Build-Command: `next build`
@@ -19,22 +24,25 @@
 
 ## Stripe
 - [ ] Stripe Live-Modus aktivieren
-- [ ] Webhook-Endpunkt in Stripe Dashboard eintragen: https://festly.de/api/stripe/webhook
-- [ ] Webhook-Events aktivieren: payment_intent.succeeded, payment_intent.payment_failed, transfer.created
+- [ ] Webhook-Endpunkt eintragen: https://festly.de/api/stripe/webhook
+- [ ] Webhook-Events: payment_intent.succeeded, payment_intent.payment_failed, transfer.created
 
 ## Resend
 - [ ] Domain festly.de in Resend verifizieren (DNS-Einträge setzen)
 - [ ] EMAIL_FROM auf verifizierte Domain setzen
 
-## Supabase
-- [ ] Auth → E-Mail-Verifizierung wieder aktivieren (war fürs Testen deaktiviert)
-- [ ] Auth → Site URL auf https://festly.de setzen
-- [ ] Auth → Redirect URLs: https://festly.de/auth/reset-password
-
 ## Domain
+- [ ] Domain registrieren (festly.de)
 - [ ] Domain auf Vercel zeigen lassen (DNS A/CNAME)
 - [ ] SSL automatisch via Vercel
+
+## Rechtlich (vor Launch zwingend — anwaltlich prüfen lassen)
+- [ ] AGB finalisieren (/agb)
+- [ ] Datenschutzerklärung finalisieren (/datenschutz)
+- [ ] Impressum finalisieren (/impressum)
+- [ ] Widerrufsbelehrung finalisieren (/widerruf)
 
 ## Nach dem Deploy
 - [ ] Testbuchung mit echtem Stripe durchführen
 - [ ] Cron-Job in Vercel einrichten: GET /api/cron/auto-release täglich, Bearer = CRON_SECRET
+- [ ] Sentry Fehler-Monitoring prüfen
