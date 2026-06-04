@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AnbieterCtaButton from './AnbieterCtaButton'
 
 export const metadata = {
   title: 'So funktioniert Festly',
@@ -135,12 +136,7 @@ export default function SoFunktioniertPage() {
             <Link href="/marktplatz" className="btn-primary px-8 py-3 text-sm font-semibold">
               Angebote entdecken
             </Link>
-            <Link
-              href="/register"
-              className="px-8 py-3 rounded-full text-sm font-semibold border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-white transition-all"
-            >
-              Als Anbieter starten
-            </Link>
+            <AnbieterCtaButton />
           </div>
         </div>
       </div>
