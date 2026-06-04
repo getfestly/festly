@@ -47,10 +47,25 @@ export default function MeinBereichPage() {
         new Date(user.created_at).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
       )
 
-      const [profileRes, bookingsRes, listingsRes] = await Promise.all([
-        supabase.from('profiles')
-          .select('display_name, role, stripe_account_id, stripe_onboarding_complete, location_address')
-          .eq('id', user.id).single(),
+      // Profil: erst mit location_address versuchen; fällt zurück falls Spalte
+      // in der DB noch nicht existiert (Migration 008 nicht ausgeführt)
+      let p = null
+      const { data: fullProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('display_name, role, stripe_account_id, stripe_onboarding_complete, location_address')
+        .eq('id', user.id).single()
+
+      if (fullProfile) {
+        p = fullProfile
+      } else if (profileError) {
+        const { data: coreProfile } = await supabase
+          .from('profiles')
+          .select('display_name, role, stripe_account_id, stripe_onboarding_complete')
+          .eq('id', user.id).single()
+        p = coreProfile
+      }
+
+      const [bookingsRes, listingsRes] = await Promise.all([
         supabase.from('bookings')
           .select('id, status, event_date, amount_cents, listings(title)')
           .eq('customer_id', user.id)
@@ -62,7 +77,6 @@ export default function MeinBereichPage() {
           .order('created_at', { ascending: false }),
       ])
 
-      const p = profileRes.data
       setProfile(p)
       setDraftName(p?.display_name ?? '')
       setDraftAddress(p?.location_address ?? '')
