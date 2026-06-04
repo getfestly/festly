@@ -16,7 +16,10 @@ function MarktplatzContent() {
   const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     async function load() {
+      setLoading(true)
       try {
         let query = supabase
           .from('listings')
@@ -44,16 +47,19 @@ function MarktplatzContent() {
         }
 
         const { data, error } = await query
+        if (cancelled) return
         if (error) console.error('[Marktplatz] Fehler:', error)
         setListings(data ?? [])
       } catch (err) {
+        if (cancelled) return
         console.error('[Marktplatz] Unerwarteter Fehler:', err)
         setListings([])
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [activeCategory, activeRegion, activeDate])
 
   return (
