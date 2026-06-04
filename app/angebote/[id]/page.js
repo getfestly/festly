@@ -19,53 +19,57 @@ export default function AngebotDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: listing } = await supabase
-        .from('listings')
-        .select('*, profiles(display_name)')
-        .eq('id', id)
-        .eq('is_active', true)
-        .single()
+      try {
+        const { data: listing } = await supabase
+          .from('listings')
+          .select('*, profiles(display_name)')
+          .eq('id', id)
+          .eq('is_active', true)
+          .single()
 
-      if (!listing) { router.replace('/marktplatz'); return }
-      setListing(listing)
-      trackEvent('listing_detail_viewed', {
-        listing_id:  listing.id,
-        category:    listing.category,
-        provider_id: listing.provider_id,
-      })
+        if (!listing) { router.replace('/marktplatz'); return }
+        setListing(listing)
+        trackEvent('listing_detail_viewed', {
+          listing_id:  listing.id,
+          category:    listing.category,
+          provider_id: listing.provider_id,
+        })
 
-      const { data: bookingIds } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('listing_id', id)
-        .eq('status', 'completed')
-
-      if (bookingIds && bookingIds.length > 0) {
-        const ids = bookingIds.map((b) => b.id)
-        const { data: reviewData } = await supabase
-          .from('reviews')
-          .select('rating, comment, created_at, profiles(display_name)')
-          .in('booking_id', ids)
-          .order('created_at', { ascending: false })
-        setReviews(reviewData ?? [])
-      }
-
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setCurrentUser(user)
-        const { data: completed } = await supabase
+        const { data: bookingIds } = await supabase
           .from('bookings')
           .select('id')
           .eq('listing_id', id)
-          .eq('customer_id', user.id)
           .eq('status', 'completed')
-          .maybeSingle()
-        setHasCompletedBooking(!!completed)
-      } else {
-        setCurrentUser(false)
-      }
 
-      setLoading(false)
+        if (bookingIds && bookingIds.length > 0) {
+          const ids = bookingIds.map((b) => b.id)
+          const { data: reviewData } = await supabase
+            .from('reviews')
+            .select('rating, comment, created_at, profiles(display_name)')
+            .in('booking_id', ids)
+            .order('created_at', { ascending: false })
+          setReviews(reviewData ?? [])
+        }
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setCurrentUser(user)
+          const { data: completed } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('listing_id', id)
+            .eq('customer_id', user.id)
+            .eq('status', 'completed')
+            .maybeSingle()
+          setHasCompletedBooking(!!completed)
+        } else {
+          setCurrentUser(false)
+        }
+      } catch (err) {
+        console.error('[AngebotDetail] Load-Fehler:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [id, router])

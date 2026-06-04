@@ -12,20 +12,26 @@ export default function AnbieterListingsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
+      try {
+        const { data: authData } = await supabase.auth.getSession()
+        const user = authData?.session?.user ?? null
+        if (!user) { router.replace('/login'); return }
 
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role !== 'provider') { router.replace('/mein-bereich'); return }
+        const { data: profile } = await supabase
+          .from('profiles').select('role').eq('id', user.id).single()
+        if (profile?.role !== 'provider') { router.replace('/mein-bereich'); return }
 
-      const { data } = await supabase
-        .from('listings')
-        .select('id, title, category, price_cents, region, is_active, created_at')
-        .eq('provider_id', user.id)
-        .order('created_at', { ascending: false })
-      setListings(data ?? [])
-      setLoading(false)
+        const { data } = await supabase
+          .from('listings')
+          .select('id, title, category, price_cents, region, is_active, created_at')
+          .eq('provider_id', user.id)
+          .order('created_at', { ascending: false })
+        setListings(data ?? [])
+      } catch (err) {
+        console.error('[Anbieter/Listings] Load-Fehler:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [router])

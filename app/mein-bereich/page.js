@@ -38,51 +38,56 @@ export default function MeinBereichPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { router.replace('/login'); return }
 
-      setEmail(user.email)
-      setUserId(user.id)
-      setMemberSince(
-        new Date(user.created_at).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-      )
+        setEmail(user.email)
+        setUserId(user.id)
+        setMemberSince(
+          new Date(user.created_at).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+        )
 
-      // Profil: erst mit location_address versuchen; fällt zurück falls Spalte
-      // in der DB noch nicht existiert (Migration 008 nicht ausgeführt)
-      let p = null
-      const { data: fullProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('display_name, role, stripe_account_id, stripe_onboarding_complete, location_address')
-        .eq('id', user.id).single()
-
-      if (fullProfile) {
-        p = fullProfile
-      } else if (profileError) {
-        const { data: coreProfile } = await supabase
+        // Profil: erst mit location_address versuchen; fällt zurück falls Spalte
+        // in der DB noch nicht existiert (Migration 008 nicht ausgeführt)
+        let p = null
+        const { data: fullProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, role, stripe_account_id, stripe_onboarding_complete')
+          .select('display_name, role, stripe_account_id, stripe_onboarding_complete, location_address')
           .eq('id', user.id).single()
-        p = coreProfile
+
+        if (fullProfile) {
+          p = fullProfile
+        } else if (profileError) {
+          const { data: coreProfile } = await supabase
+            .from('profiles')
+            .select('display_name, role, stripe_account_id, stripe_onboarding_complete')
+            .eq('id', user.id).single()
+          p = coreProfile
+        }
+
+        const [bookingsRes, listingsRes] = await Promise.all([
+          supabase.from('bookings')
+            .select('id, status, event_date, amount_cents, listings(title)')
+            .eq('customer_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase.from('listings')
+            .select('id, title, category, is_active')
+            .eq('provider_id', user.id)
+            .order('created_at', { ascending: false }),
+        ])
+
+        setProfile(p)
+        setDraftName(p?.display_name ?? '')
+        setDraftAddress(p?.location_address ?? '')
+        setCustomerBookings(bookingsRes.data ?? [])
+        setListings(listingsRes.data ?? [])
+      } catch (err) {
+        console.error('[MeinBereich] Load-Fehler:', err)
+      } finally {
+        setLoading(false)
       }
-
-      const [bookingsRes, listingsRes] = await Promise.all([
-        supabase.from('bookings')
-          .select('id, status, event_date, amount_cents, listings(title)')
-          .eq('customer_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        supabase.from('listings')
-          .select('id, title, category, is_active')
-          .eq('provider_id', user.id)
-          .order('created_at', { ascending: false }),
-      ])
-
-      setProfile(p)
-      setDraftName(p?.display_name ?? '')
-      setDraftAddress(p?.location_address ?? '')
-      setCustomerBookings(bookingsRes.data ?? [])
-      setListings(listingsRes.data ?? [])
-      setLoading(false)
     }
     load()
   }, [router])

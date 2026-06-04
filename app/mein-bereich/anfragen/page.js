@@ -56,31 +56,35 @@ export default function AnfragenPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
-      setUserId(user.id)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { router.replace('/login'); return }
+        setUserId(user.id)
 
-      const [customerRes, providerRes, listingsRes] = await Promise.all([
-        supabase.from('bookings').select(BOOKING_SELECT)
-          .eq('customer_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('bookings').select(BOOKING_SELECT)
-          .eq('provider_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('listings').select('id').eq('provider_id', user.id),
-      ])
+        const [customerRes, providerRes, listingsRes] = await Promise.all([
+          supabase.from('bookings').select(BOOKING_SELECT)
+            .eq('customer_id', user.id).order('created_at', { ascending: false }),
+          supabase.from('bookings').select(BOOKING_SELECT)
+            .eq('provider_id', user.id).order('created_at', { ascending: false }),
+          supabase.from('listings').select('id').eq('provider_id', user.id),
+        ])
 
-      const cBookings = customerRes.data ?? []
-      setCustomerBookings(cBookings)
-      setProviderBookings(providerRes.data ?? [])
-      setListingsCount(listingsRes.data?.length ?? 0)
+        const cBookings = customerRes.data ?? []
+        setCustomerBookings(cBookings)
+        setProviderBookings(providerRes.data ?? [])
+        setListingsCount(listingsRes.data?.length ?? 0)
 
-      const completedIds = cBookings.filter(b => b.status === 'completed').map(b => b.id)
-      if (completedIds.length > 0) {
-        const { data: existing } = await supabase
-          .from('reviews').select('booking_id').in('booking_id', completedIds)
-        setReviewedIds(new Set(existing?.map(r => r.booking_id) ?? []))
+        const completedIds = cBookings.filter(b => b.status === 'completed').map(b => b.id)
+        if (completedIds.length > 0) {
+          const { data: existing } = await supabase
+            .from('reviews').select('booking_id').in('booking_id', completedIds)
+          setReviewedIds(new Set(existing?.map(r => r.booking_id) ?? []))
+        }
+      } catch (err) {
+        console.error('[Anfragen] Load-Fehler:', err)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
     load()
   }, [router])

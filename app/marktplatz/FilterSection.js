@@ -102,92 +102,96 @@ export default function FilterSection({ responseByProvider = {} }) {
     if (!append) setLoading(true)
     else setLoadingMore(true)
 
-    // Datum-Normalisierung: bei nur "Von" → Einzeltag
-    const effectiveFrom = dateFrom || null
-    const effectiveTo   = dateFrom ? (dateTo || dateFrom) : null
+    try {
+      // Datum-Normalisierung: bei nur "Von" → Einzeltag
+      const effectiveFrom = dateFrom || null
+      const effectiveTo   = dateFrom ? (dateTo || dateFrom) : null
 
-    // Gebuchte Listing-IDs für den Zeitraum ermitteln (fire & silent on error)
-    let bookedIds = []
-    if (effectiveFrom) {
-      try {
-        const { data: booked } = await supabase
-          .from('bookings')
-          .select('listing_id')
-          .in('status', ['accepted', 'paid', 'completed'])
-          .not('listing_id', 'is', null)
-          .gte('event_date', effectiveFrom)
-          .lte('event_date', effectiveTo)
+      // Gebuchte Listing-IDs für den Zeitraum ermitteln (fire & silent on error)
+      let bookedIds = []
+      if (effectiveFrom) {
+        try {
+          const { data: booked } = await supabase
+            .from('bookings')
+            .select('listing_id')
+            .in('status', ['accepted', 'paid', 'completed'])
+            .not('listing_id', 'is', null)
+            .gte('event_date', effectiveFrom)
+            .lte('event_date', effectiveTo)
 
-        bookedIds = [...new Set((booked ?? []).map((b) => b.listing_id).filter(Boolean))]
-      } catch {
-        // RLS verhindert ggf. Lesezugriff — Datum-Filter ohne Ausschluss
+          bookedIds = [...new Set((booked ?? []).map((b) => b.listing_id).filter(Boolean))]
+        } catch {
+          // RLS verhindert ggf. Lesezugriff — Datum-Filter ohne Ausschluss
+        }
       }
-    }
 
-    let query = supabase
-      .from('listings')
-      .select('id, title, description, category, subcategory, price_cents, price_model, price_unit_label, region, photos, created_at, provider_id')
-      .eq('is_active', true)
+      let query = supabase
+        .from('listings')
+        .select('id, title, description, category, subcategory, price_cents, price_model, price_unit_label, region, photos, created_at, provider_id')
+        .eq('is_active', true)
 
-    // Filter: Subkategorie hat Vorrang vor Oberkategorie
-    if (subkategorie)      query = query.eq('subcategory', subkategorie)
-    else if (kategorie)    query = query.eq('category', kategorie)
+      // Filter: Subkategorie hat Vorrang vor Oberkategorie
+      if (subkategorie)      query = query.eq('subcategory', subkategorie)
+      else if (kategorie)    query = query.eq('category', kategorie)
 
-    if (region)            query = query.ilike('region', `%${region}%`)
-    if (bookedIds.length)  query = query.not('id', 'in', `(${bookedIds.join(',')})`)
+      if (region)            query = query.ilike('region', `%${region}%`)
+      if (bookedIds.length)  query = query.not('id', 'in', `(${bookedIds.join(',')})`)
 
-    if (sortierung === 'price_asc')          query = query.order('price_cents', { ascending: true })
-    if (sortierung === 'price_desc')         query = query.order('price_cents', { ascending: false })
-    if (sortierung === 'newest')             query = query.order('created_at',  { ascending: false })
-    if (sortierung === 'schnellste_antwort') query = query.order('created_at',  { ascending: false })
-    if (sortierung === 'neu_14') {
-      const cutoff = new Date(Date.now() - NEU_MS).toISOString()
-      query = query.gte('created_at', cutoff).order('created_at', { ascending: false })
-    }
+      if (sortierung === 'price_asc')          query = query.order('price_cents', { ascending: true })
+      if (sortierung === 'price_desc')         query = query.order('price_cents', { ascending: false })
+      if (sortierung === 'newest')             query = query.order('created_at',  { ascending: false })
+      if (sortierung === 'schnellste_antwort') query = query.order('created_at',  { ascending: false })
+      if (sortierung === 'neu_14') {
+        const cutoff = new Date(Date.now() - NEU_MS).toISOString()
+        query = query.gte('created_at', cutoff).order('created_at', { ascending: false })
+      }
 
-    const from = pageNum * PAGE_SIZE
-    query = query.range(from, from + PAGE_SIZE - 1)
+      const from = pageNum * PAGE_SIZE
+      query = query.range(from, from + PAGE_SIZE - 1)
 
-    const { data } = await query
-    let result = data ?? []
+      const { data } = await query
+      let result = data ?? []
 
-    if (sortierung === 'schnellste_antwort') {
-      result = [...result].sort((a, b) => {
-        const aH = responseByProvider[a.provider_id]?.avgHours ?? Infinity
-        const bH = responseByProvider[b.provider_id]?.avgHours ?? Infinity
-        return aH - bH
-      })
-    }
-
-    if (append) {
-      setListings(prev => [...prev, ...result])
-    } else {
-      setListings(result)
-    }
-    setHasMore(result.length === PAGE_SIZE)
-
-    if (!append) setLoading(false)
-    else setLoadingMore(false)
-
-    // Tracking nur beim ersten Laden einer neuen Suche
-    if (!append) {
-      if (kategorie || region) {
-        trackEvent('search_performed', {
-          category:      kategorie || null,
-          region:        region    || null,
-          results_count: result.length,
+      if (sortierung === 'schnellste_antwort') {
+        result = [...result].sort((a, b) => {
+          const aH = responseByProvider[a.provider_id]?.avgHours ?? Infinity
+          const bH = responseByProvider[b.provider_id]?.avgHours ?? Infinity
+          return aH - bH
         })
       }
 
-      supabase.from('search_events').insert({
-        user_id:         userId ?? null,
-        category:        kategorie    || null,
-        subcategory:     subkategorie || null,
-        region:          region       || null,
-        event_date_from: effectiveFrom,
-        event_date_to:   effectiveTo,
-        results_count:   result.length,
-      }).then(() => {}).catch(() => {})
+      if (append) {
+        setListings(prev => [...prev, ...result])
+      } else {
+        setListings(result)
+      }
+      setHasMore(result.length === PAGE_SIZE)
+
+      // Tracking nur beim ersten Laden einer neuen Suche
+      if (!append) {
+        if (kategorie || region) {
+          trackEvent('search_performed', {
+            category:      kategorie || null,
+            region:        region    || null,
+            results_count: result.length,
+          })
+        }
+
+        supabase.from('search_events').insert({
+          user_id:         userId ?? null,
+          category:        kategorie    || null,
+          subcategory:     subkategorie || null,
+          region:          region       || null,
+          event_date_from: effectiveFrom,
+          event_date_to:   effectiveTo,
+          results_count:   result.length,
+        }).then(() => {}).catch(() => {})
+      }
+    } catch (err) {
+      console.error('[FilterSection] fetchListings Fehler:', err)
+    } finally {
+      if (!append) setLoading(false)
+      else setLoadingMore(false)
     }
 
   }, [kategorie, subkategorie, region, dateFrom, dateTo, sortierung, responseByProvider, userId])
