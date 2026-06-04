@@ -3,7 +3,11 @@ import Link from 'next/link'
 import { KATEGORIE_EMOJI, formatRegion } from '@/lib/constants'
 
 export default function ListingCard({ listing }) {
-  const photo = listing.photos?.[0] ?? null
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const photoFile   = listing.photos?.[0] ?? null
+  const photo       = photoFile
+    ? `${supabaseUrl}/storage/v1/object/public/listing-photos/${photoFile}`
+    : null
   const emoji = KATEGORIE_EMOJI[listing.category] ?? '🎪'
   const preis = (!listing.price_cents || listing.price_model === 'on_request')
     ? 'Auf Anfrage'
@@ -12,7 +16,7 @@ export default function ListingCard({ listing }) {
 
   return (
     <Link href={`/angebote/${listing.id}`} className="group hover:scale-[1.01] transition-all duration-200">
-      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-3">
+      <div className="h-[200px] rounded-2xl overflow-hidden bg-gray-100 relative mb-3">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt={listing.title}

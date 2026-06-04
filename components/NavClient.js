@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ADMIN_USER_ID } from '@/lib/admin'
 import { KATEGORIEN, KATEGORIE_EMOJI } from '@/lib/constants'
@@ -16,8 +16,10 @@ const TAB_LABEL = {
 }
 
 export default function NavClient() {
-  const router   = useRouter()
-  const pathname = usePathname()
+  const router        = useRouter()
+  const pathname      = usePathname()
+  const searchParams  = useSearchParams()
+  const activeKat     = pathname === '/' ? (searchParams.get('kategorie') ?? '') : ''
 
   const [user, setUser]                 = useState(null)
   const [profile, setProfile]           = useState(null)
@@ -105,18 +107,21 @@ export default function NavClient() {
         {/* Dort filtert useSearchParams() die angezeigten Listings        */}
         <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-0.5 min-w-max">
-            {KATEGORIEN.map(k => (
-              <Link
-                key={k.id}
-                href={`/?kategorie=${k.id}`}
-                className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-center whitespace-nowrap hover:bg-gray-100 transition-colors group"
-              >
-                <span className="text-lg leading-none">{KATEGORIE_EMOJI[k.id]}</span>
-                <span className="text-xs font-medium text-gray-500 group-hover:text-gray-900 transition-colors">
-                  {TAB_LABEL[k.id]}
-                </span>
-              </Link>
-            ))}
+            {KATEGORIEN.map(k => {
+              const isActive = activeKat === k.id
+              return (
+                <Link
+                  key={k.id}
+                  href={`/?kategorie=${k.id}`}
+                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-center whitespace-nowrap transition-colors group ${isActive ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                >
+                  <span className="text-lg leading-none">{KATEGORIE_EMOJI[k.id]}</span>
+                  <span className={`text-xs font-medium transition-colors ${isActive ? 'text-gray-900 font-bold underline underline-offset-2' : 'text-gray-500 group-hover:text-gray-900'}`}>
+                    {TAB_LABEL[k.id]}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
         </div>
 

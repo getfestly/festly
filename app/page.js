@@ -70,11 +70,10 @@ function MarktplatzContent() {
           />
         </div>
 
-        {/* Ergebniszähler */}
-        {!loading && (
-          <p className="text-sm text-gray-400 mb-6">
-            {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'}
-            {activeCategory || activeRegion || activeDate ? ' gefunden' : ' insgesamt'}
+        {/* Ergebniszähler — nur bei aktiven Filtern */}
+        {!loading && (activeCategory || activeRegion || activeDate) && (
+          <p className="text-xs text-gray-300 mb-4">
+            {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'} gefunden
           </p>
         )}
 
@@ -92,7 +91,7 @@ function MarktplatzContent() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
             {listings.map(l => <ListingCard key={l.id} listing={l} />)}
           </div>
         )}
