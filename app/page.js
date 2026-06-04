@@ -234,15 +234,23 @@ export default function HomePage() {
 
   // Listings laden
   useEffect(() => {
-    supabase
-      .from('listings')
-      .select('id, title, category, region, price_cents, price_model, photos')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
+    async function load() {
+      try {
+        const { data, error } = await supabase
+          .from('listings')
+          .select('id, title, category, region, price_cents, price_model, photos')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+        if (error) console.error('[Startseite] Listings-Fehler:', error.message, error.code)
         setListings(data ?? [])
+      } catch (err) {
+        console.error('[Startseite] Unerwarteter Fehler:', err)
+        setListings([])
+      } finally {
         setListingsLoading(false)
-      })
+      }
+    }
+    load()
   }, [])
 
   // Klick außerhalb → Panels schließen
