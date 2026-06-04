@@ -34,9 +34,9 @@ function LoginForm() {
         return
       }
 
+      router.push('/')
       trackEvent('user_logged_in', {})
       identifyUser(data.user.id, { email: data.user.email })
-      router.push('/')
     } catch (err) {
       setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
     } finally {
