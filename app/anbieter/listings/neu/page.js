@@ -138,47 +138,53 @@ export default function NeuesListingPage() {
     setError(null)
     setLoading(true)
 
-    const uploadedUrls = []
-    for (let i = 0; i < photos.length; i++) {
-      const file = photos[i]
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = `listings/${user.id}/${Date.now()}_${i}_${safeName}`
-      const { error: uploadError } = await supabase.storage
-        .from('listing-photos').upload(path, file)
-      if (uploadError) {
-        setError(`Foto-Upload fehlgeschlagen: ${uploadError.message}`)
-        setLoading(false)
-        return
+    try {
+      const uploadedUrls = []
+      for (let i = 0; i < photos.length; i++) {
+        const file = photos[i]
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `listings/${user.id}/${Date.now()}_${i}_${safeName}`
+        const { error: uploadError } = await supabase.storage
+          .from('listing-photos').upload(path, file)
+        if (uploadError) {
+          setError(`Foto-Upload fehlgeschlagen: ${uploadError.message}`)
+          return
+        }
+        const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        uploadedUrls.push(urlData.publicUrl)
       }
-      const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path)
-      uploadedUrls.push(urlData.publicUrl)
+
+      const price_cents = form.price_model === 'on_request'
+        ? 0
+        : Math.round(parseFloat(form.priceEuro) * 100)
+
+      if (profile?.role === 'customer') {
+        await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
+      }
+
+      const { error: insertError } = await supabase.from('listings').insert({
+        provider_id:      user.id,
+        title:            form.title,
+        description:      form.description || null,
+        category:         form.category,
+        subcategory:      form.subcategory || null,
+        vehicle_type:     form.vehicle_type || null,
+        price_model:      form.price_model,
+        price_cents,
+        price_unit_label: form.price_unit_label || null,
+        region:           form.region || null,
+        location_address: form.location_address || null,
+        photos:           uploadedUrls,
+      })
+
+      if (insertError) { setError(insertError.message); return }
+      router.push('/anbieter/listings')
+    } catch (err) {
+      console.error('[NeuesListing] Fehler:', err)
+      setError('Ein Fehler ist aufgetreten. Bitte versuche es erneut.')
+    } finally {
+      setLoading(false)
     }
-
-    const price_cents = form.price_model === 'on_request'
-      ? 0
-      : Math.round(parseFloat(form.priceEuro) * 100)
-
-    if (profile?.role === 'customer') {
-      await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
-    }
-
-    const { error: insertError } = await supabase.from('listings').insert({
-      provider_id:      user.id,
-      title:            form.title,
-      description:      form.description || null,
-      category:         form.category,
-      subcategory:      form.subcategory || null,
-      vehicle_type:     form.vehicle_type || null,
-      price_model:      form.price_model,
-      price_cents,
-      price_unit_label: form.price_unit_label || null,
-      region:           form.region || null,
-      location_address: form.location_address || null,
-      photos:           uploadedUrls,
-    })
-
-    if (insertError) { setError(insertError.message); setLoading(false); return }
-    router.push('/anbieter/listings')
   }
 
   if (!user) {

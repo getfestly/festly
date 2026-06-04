@@ -154,47 +154,53 @@ export default function BearbeitenPage() {
     setError(null)
     setLoading(true)
 
-    const uploadedUrls = []
-    for (let i = 0; i < newPhotos.length; i++) {
-      const file = newPhotos[i]
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = `listings/${user.id}/${Date.now()}_${i}_${safeName}`
-      const { error: uploadError } = await supabase.storage
-        .from('listing-photos').upload(path, file)
-      if (uploadError) {
-        setError(`Foto-Upload fehlgeschlagen: ${uploadError.message}`)
-        setLoading(false)
-        return
+    try {
+      const uploadedUrls = []
+      for (let i = 0; i < newPhotos.length; i++) {
+        const file = newPhotos[i]
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `listings/${user.id}/${Date.now()}_${i}_${safeName}`
+        const { error: uploadError } = await supabase.storage
+          .from('listing-photos').upload(path, file)
+        if (uploadError) {
+          setError(`Foto-Upload fehlgeschlagen: ${uploadError.message}`)
+          return
+        }
+        const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        uploadedUrls.push(urlData.publicUrl)
       }
-      const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path)
-      uploadedUrls.push(urlData.publicUrl)
+
+      const photos = [...form.photos, ...uploadedUrls]
+      const price_cents = form.price_model === 'on_request'
+        ? 0
+        : Math.round(parseFloat(form.priceEuro) * 100)
+
+      const { error: updateError } = await supabase
+        .from('listings')
+        .update({
+          title:            form.title,
+          description:      form.description || null,
+          category:         form.category,
+          subcategory:      form.subcategory || null,
+          vehicle_type:     form.vehicle_type || null,
+          price_model:      form.price_model,
+          price_cents,
+          price_unit_label: form.price_unit_label || null,
+          region:           form.region || null,
+          location_address: form.location_address || null,
+          photos,
+          updated_at:       new Date().toISOString(),
+        })
+        .eq('id', id)
+
+      if (updateError) { setError(updateError.message); return }
+      router.push('/anbieter/listings')
+    } catch (err) {
+      console.error('[Bearbeiten] Fehler:', err)
+      setError('Ein Fehler ist aufgetreten. Bitte versuche es erneut.')
+    } finally {
+      setLoading(false)
     }
-
-    const photos = [...form.photos, ...uploadedUrls]
-    const price_cents = form.price_model === 'on_request'
-      ? 0
-      : Math.round(parseFloat(form.priceEuro) * 100)
-
-    const { error: updateError } = await supabase
-      .from('listings')
-      .update({
-        title:            form.title,
-        description:      form.description || null,
-        category:         form.category,
-        subcategory:      form.subcategory || null,
-        vehicle_type:     form.vehicle_type || null,
-        price_model:      form.price_model,
-        price_cents,
-        price_unit_label: form.price_unit_label || null,
-        region:           form.region || null,
-        location_address: form.location_address || null,
-        photos,
-        updated_at:       new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (updateError) { setError(updateError.message); setLoading(false); return }
-    router.push('/anbieter/listings')
   }
 
   if (!form) {

@@ -102,25 +102,31 @@ export default function AnfragenPage() {
     setReviewLoading(true)
     setReviewError(null)
 
-    const res = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookingId: reviewModal.bookingId,
-        rating: reviewRating,
-        comment: reviewComment,
-      }),
-    })
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: reviewModal.bookingId,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      })
 
-    setReviewLoading(false)
-    if (!res.ok) {
-      const body = await res.json()
-      setReviewError(body.error ?? 'Unbekannter Fehler')
-      return
+      if (!res.ok) {
+        const body = await res.json()
+        setReviewError(body.error ?? 'Unbekannter Fehler')
+        return
+      }
+
+      setReviewedIds(prev => new Set([...prev, reviewModal.bookingId]))
+      setReviewModal(null)
+    } catch (err) {
+      console.error('[submitReview] Fehler:', err)
+      setReviewError('Netzwerkfehler. Bitte versuche es erneut.')
+    } finally {
+      setReviewLoading(false)
     }
-
-    setReviewedIds(prev => new Set([...prev, reviewModal.bookingId]))
-    setReviewModal(null)
   }
 
   async function handleStatus(bookingId, newStatus) {

@@ -37,11 +37,16 @@ export default function ResetPasswordPage() {
     if (password !== confirm) { setError('Die Passwörter stimmen nicht überein.'); return }
     setLoading(true)
 
-    const { error: authError } = await supabase.auth.updateUser({ password })
-    setLoading(false)
-
-    if (authError) { setError(authError.message); return }
-    router.push('/login?reset=success')
+    try {
+      const { error: authError } = await supabase.auth.updateUser({ password })
+      if (authError) { setError(authError.message); return }
+      router.push('/login?reset=success')
+    } catch (err) {
+      console.error('[ResetPassword] Fehler:', err)
+      setError('Passwort konnte nicht geändert werden.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!ready) {

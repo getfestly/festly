@@ -113,35 +113,39 @@ export default function VerfuegbarkeitPage() {
   // Daten laden
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { router.replace('/login'); return }
 
-      const [listingRes, availRes, bookingRes] = await Promise.all([
-        supabase.from('listings').select('id, title, setup_days')
-          .eq('id', id).eq('provider_id', user.id).single(),
-        supabase.from('listing_availability').select('blocked_from, blocked_until, reason')
-          .eq('listing_id', id)
-          .lte('blocked_from', rangeEnd).gte('blocked_until', rangeStart),
-        supabase.from('bookings').select('event_date')
-          .eq('listing_id', id).in('status', ['accepted', 'paid'])
-          .gte('event_date', rangeStart).lte('event_date', rangeEnd),
-      ])
+        const [listingRes, availRes, bookingRes] = await Promise.all([
+          supabase.from('listings').select('id, title, setup_days')
+            .eq('id', id).eq('provider_id', user.id).single(),
+          supabase.from('listing_availability').select('blocked_from, blocked_until, reason')
+            .eq('listing_id', id)
+            .lte('blocked_from', rangeEnd).gte('blocked_until', rangeStart),
+          supabase.from('bookings').select('event_date')
+            .eq('listing_id', id).in('status', ['accepted', 'paid'])
+            .gte('event_date', rangeStart).lte('event_date', rangeEnd),
+        ])
 
-      if (!listingRes.data) { router.replace('/anbieter/listings'); return }
+        if (!listingRes.data) { router.replace('/anbieter/listings'); return }
 
-      const sc = listingRes.data.setup_days ?? 0
-      setListing(listingRes.data)
-      setSetupCount(sc)
-      setPendingSetupCount(sc)
+        const sc = listingRes.data.setup_days ?? 0
+        setListing(listingRes.data)
+        setSetupCount(sc)
+        setPendingSetupCount(sc)
 
-      const blocked = expandRanges(availRes.data ?? [], rangeStart, rangeEnd)
-      setPendingBlocked(blocked)
-      setSavedBlocked(new Set(blocked))
+        const blocked = expandRanges(availRes.data ?? [], rangeStart, rangeEnd)
+        setPendingBlocked(blocked)
+        setSavedBlocked(new Set(blocked))
 
-      const booked = new Set((bookingRes.data ?? []).map(b => b.event_date))
-      setBookedDays(booked)
-
-      setLoading(false)
+        const booked = new Set((bookingRes.data ?? []).map(b => b.event_date))
+        setBookedDays(booked)
+      } catch (err) {
+        console.error('[Verfuegbarkeit] Load-Fehler:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [id, router, rangeStart, rangeEnd])

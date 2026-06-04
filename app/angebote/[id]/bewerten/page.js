@@ -56,20 +56,26 @@ export default function BewertungPage() {
     setError(null)
     setLoading(true)
 
-    const res = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId, rating, comment: comment.trim() || null }),
-    })
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, rating, comment: comment.trim() || null }),
+      })
 
-    if (!res.ok) {
-      const body = await res.json()
-      setError(res.status === 409 ? 'Du hast dieses Angebot bereits bewertet.' : (body.error ?? 'Unbekannter Fehler'))
+      if (!res.ok) {
+        const body = await res.json()
+        setError(res.status === 409 ? 'Du hast dieses Angebot bereits bewertet.' : (body.error ?? 'Unbekannter Fehler'))
+        return
+      }
+
+      setDone(true)
+    } catch (err) {
+      console.error('[Bewertung] Fehler:', err)
+      setError('Netzwerkfehler. Bitte versuche es erneut.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setDone(true)
   }
 
   if (!listing) {

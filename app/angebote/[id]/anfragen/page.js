@@ -323,29 +323,36 @@ export default function AnfragenPage() {
     setError(null)
     setLoading(true)
 
-    const result = await submitBooking({
-      listingId,
-      eventDateFrom,
-      eventDateTo: eventDateTo || eventDateFrom,
-      quantity,
-      eventTitle,
-      eventDescription,
-      transportCents,
-      eventStreet,
-      eventHouseNumber,
-      eventZip,
-      eventCity,
-    })
+    try {
+      const result = await submitBooking({
+        listingId,
+        eventDateFrom,
+        eventDateTo: eventDateTo || eventDateFrom,
+        quantity,
+        eventTitle,
+        eventDescription,
+        transportCents,
+        eventStreet,
+        eventHouseNumber,
+        eventZip,
+        eventCity,
+      })
 
-    if (result.error) { setError(result.error); setLoading(false); return }
+      if (result.error) { setError(result.error); return }
 
-    const days = eventDateTo ? diffDays(eventDateFrom, eventDateTo) : 1
-    trackEvent('booking_submitted', {
-      listing_id:   listingId,
-      amount_cents: calcBaseCents(listing, quantity, days) + transportCents,
-      price_model:  listing?.price_model,
-    })
-    router.push('/mein-bereich/anfragen')
+      const days = eventDateTo ? diffDays(eventDateFrom, eventDateTo) : 1
+      trackEvent('booking_submitted', {
+        listing_id:   listingId,
+        amount_cents: calcBaseCents(listing, quantity, days) + transportCents,
+        price_model:  listing?.price_model,
+      })
+      router.push('/mein-bereich/anfragen')
+    } catch (err) {
+      console.error('[AnfragenPage] handleSubmit Fehler:', err)
+      setError('Netzwerkfehler. Bitte versuche es erneut.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!listing) {

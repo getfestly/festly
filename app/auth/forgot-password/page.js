@@ -14,13 +14,19 @@ export default function ForgotPasswordPage() {
     setError(null)
     setLoading(true)
 
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
+    try {
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
 
-    setLoading(false)
-    if (authError) { setError(authError.message); return }
-    setSent(true)
+      if (authError) { setError(authError.message); return }
+      setSent(true)
+    } catch (err) {
+      console.error('[ForgotPassword] Fehler:', err)
+      setError('Fehler beim Senden des Reset-Links.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (sent) {

@@ -24,41 +24,47 @@ export default function RegisterPage() {
     }
     setLoading(true)
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-    })
+    try {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+      })
 
-    if (authError) { setError(authError.message); setLoading(false); return }
+      if (authError) { setError(authError.message); return }
 
-    const user = data.user
-    if (!user) { setError('Registrierung fehlgeschlagen.'); setLoading(false); return }
+      const user = data.user
+      if (!user) { setError('Registrierung fehlgeschlagen.'); return }
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: user.id,
-      display_name: form.displayName,
-      role: 'customer',
-      accepted_terms_at: new Date().toISOString(),
-    })
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: user.id,
+        display_name: form.displayName,
+        role: 'customer',
+        accepted_terms_at: new Date().toISOString(),
+      })
 
-    if (profileError) {
+      if (profileError) {
+        if (!data.session) {
+          trackEvent('user_registered', { role: 'customer' })
+          router.push('/auth/verify-email')
+        } else {
+          setError(profileError.message)
+        }
+        return
+      }
+
+      trackEvent('user_registered', { role: 'customer' })
+      identifyUser(user.id, { role: 'customer' })
+
       if (!data.session) {
-        trackEvent('user_registered', { role: 'customer' })
         router.push('/auth/verify-email')
       } else {
-        setError(profileError.message)
+        router.push('/marktplatz')
       }
+    } catch (err) {
+      console.error('[Register] Fehler:', err)
+      setError('Registrierung fehlgeschlagen. Bitte versuche es erneut.')
+    } finally {
       setLoading(false)
-      return
-    }
-
-    trackEvent('user_registered', { role: 'customer' })
-    identifyUser(user.id, { role: 'customer' })
-
-    if (!data.session) {
-      router.push('/auth/verify-email')
-    } else {
-      router.push('/marktplatz')
     }
   }
 

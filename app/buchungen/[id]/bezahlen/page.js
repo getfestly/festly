@@ -25,19 +25,25 @@ function CheckoutForm({ bookingId, amount_cents }) {
     setLoading(true)
     setError(null)
 
-    const { error: stripeErr } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/buchungen/${bookingId}/bezahlen/danke`,
-      },
-    })
+    try {
+      const { error: stripeErr } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/buchungen/${bookingId}/bezahlen/danke`,
+        },
+      })
 
-    // Bei Fehler: Stripe leitet NICHT weiter, wir zeigen die Meldung
-    if (stripeErr) {
-      setError(stripeErr.message)
+      // Bei Fehler: Stripe leitet NICHT weiter, wir zeigen die Meldung
+      if (stripeErr) {
+        setError(stripeErr.message)
+      }
+      // Bei Erfolg: Stripe leitet automatisch zur return_url weiter
+    } catch (err) {
+      console.error('[Bezahlen] Fehler:', err)
+      setError('Zahlung konnte nicht verarbeitet werden.')
+    } finally {
       setLoading(false)
     }
-    // Bei Erfolg: Stripe leitet automatisch zur return_url weiter
   }
 
   return (

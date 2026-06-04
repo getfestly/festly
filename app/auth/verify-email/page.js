@@ -12,17 +12,23 @@ export default function VerifyEmailPage() {
     setError(null)
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.email) { setError('Kein Nutzer gefunden. Bitte neu einloggen.'); setLoading(false); return }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) { setError('Kein Nutzer gefunden. Bitte neu einloggen.'); return }
 
-    const { error: authError } = await supabase.auth.resend({
-      type: 'signup',
-      email: user.email,
-    })
+      const { error: authError } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+      })
 
-    setLoading(false)
-    if (authError) { setError(authError.message); return }
-    setResent(true)
+      if (authError) { setError(authError.message); return }
+      setResent(true)
+    } catch (err) {
+      console.error('[VerifyEmail] Fehler:', err)
+      setError('Fehler beim Senden der E-Mail.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
