@@ -3,7 +3,7 @@ import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN } from '@/lib/constants'
+import { KATEGORIEN, formatRegion } from '@/lib/constants'
 
 // ── Konstanten ────────────────────────────────────────────────────────────────
 
@@ -18,34 +18,33 @@ const EMOJI = {
 // ── Listing-Karte ─────────────────────────────────────────────────────────────
 
 function ListingCard({ listing }) {
-  const photo = listing.photos?.[0]
+  const photo = listing.photos?.[0] ?? null
   const emoji = EMOJI[listing.category] ?? '🎪'
   const preis = (!listing.price_cents || listing.price_model === 'on_request')
     ? 'Auf Anfrage'
     : `${(listing.price_cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / Tag`
+  const region = formatRegion(listing.region) ?? 'Deutschland'
 
   return (
-    <Link href={`/angebote/${listing.id}`} className="group w-64 flex-shrink-0">
-      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2.5">
-        {photo
-          ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photo} alt={listing.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl"
-              style={{ background: 'linear-gradient(135deg, #fdf4ff, #f0f9ff)' }}>
-              {emoji}
-            </div>
-          )
-        }
+    <Link href={`/angebote/${listing.id}`} className="group hover:scale-[1.01] transition-all duration-200">
+      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-3">
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt={listing.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-5xl"
+            style={{ background: 'linear-gradient(135deg, #fdf4ff, #f0f9ff)' }}>
+            {emoji}
+          </div>
+        )}
         <button type="button" onClick={e => { e.preventDefault(); e.stopPropagation() }}
           className="absolute top-3 right-3 text-white text-xl drop-shadow hover:text-red-400 transition-colors"
           aria-label="Merken">♡</button>
       </div>
-      <div>
+      <div className="px-0.5">
         <p className="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{listing.region ?? 'Deutschland'}</p>
+        <p className="text-xs text-gray-400 mt-0.5 truncate">{region}</p>
         <p className="text-sm mt-1 font-semibold text-gray-900">{preis}</p>
       </div>
     </Link>
@@ -67,10 +66,8 @@ function CategoryRow({ category }) {
         </Link>
       </div>
 
-      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-        <div className="flex gap-4 pb-2">
-          {category.listings.map(l => <ListingCard key={l.id} listing={l} />)}
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+        {category.listings.map(l => <ListingCard key={l.id} listing={l} />)}
       </div>
     </section>
   )
