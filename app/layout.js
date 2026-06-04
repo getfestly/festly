@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
@@ -28,9 +27,7 @@ export default function RootLayout({ children }) {
     >
       <body className="min-h-full flex flex-col">
         <PosthogProvider>
-          <Suspense fallback={<div className="sticky top-0 z-50 h-16 bg-white border-b border-gray-100" />}>
-            <Nav />
-          </Suspense>
+          <Nav />
           {children}
           <Footer />
         </PosthogProvider>

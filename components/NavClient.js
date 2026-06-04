@@ -23,20 +23,38 @@ const TAB_LABEL = {
   sanitaer_service:'Sanitär',
 }
 
-export default function NavClient({ initialUser = null, initialProfile = null, initialPendingCount = 0 }) {
+export default function NavClient() {
   const router   = useRouter()
   const pathname = usePathname()
 
-  const [user, setUser]                 = useState(initialUser)
-  const [profile, setProfile]           = useState(initialProfile)
-  const [pendingCount, setPendingCount] = useState(initialPendingCount)
+  const [user, setUser]                 = useState(null)
+  const [profile, setProfile]           = useState(null)
+  const [pendingCount, setPendingCount] = useState(0)
   const [open, setOpen]                 = useState(false)
   const dropdownRef                     = useRef(null)
 
   useEffect(() => {
+    // getSession() liest aus Cookie-Cache — kein Netzwerk-Request, kein Hänger
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) {
+        const [profileRes, pendingRes] = await Promise.all([
+          supabase.from('profiles').select('display_name, role').eq('id', u.id).single(),
+          supabase.from('bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('customer_id', u.id)
+            .in('status', ['pending', 'accepted']),
+        ])
+        setProfile(profileRes.data ?? null)
+        setPendingCount(pendingRes.count ?? 0)
+      }
+    })
+
+    // Auth-Änderungen (Login/Logout innerhalb der SPA)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'INITIAL_SESSION') return
+        if (event === 'INITIAL_SESSION') return // bereits durch getSession() behandelt
         const newUser = session?.user ?? null
         setUser(newUser)
         if (newUser) {
@@ -90,13 +108,15 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
           <span className="text-lg font-bold gradient-text leading-none hidden sm:block">Festly</span>
         </Link>
 
-        {/* ── Kategorie-Tabs (horizontal scrollbar) ─────────────────────── */}
+        {/* ── Kategorie-Tabs ────────────────────────────────────────────── */}
+        {/* Tabs navigieren zur Startseite mit ?kategorie=... Parameter   */}
+        {/* Dort filtert useSearchParams() die angezeigten Listings        */}
         <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-0.5 min-w-max">
             {KATEGORIEN.map(k => (
               <Link
                 key={k.id}
-                href={`/marktplatz?kategorie=${k.id}`}
+                href={`/?kategorie=${k.id}`}
                 className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-center whitespace-nowrap hover:bg-gray-100 transition-colors group"
               >
                 <span className="text-lg leading-none">{EMOJI[k.id]}</span>
@@ -131,7 +151,6 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
           {/* Eingeloggt */}
           {profile && (
             <div ref={dropdownRef} className="relative">
-              {/* Avatar + Hamburger */}
               <button
                 onClick={() => setOpen(o => !o)}
                 aria-label="Konto-Menü"
@@ -146,19 +165,15 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
                 </div>
               </button>
 
-              {/* Dropdown */}
               {open && (
                 <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
 
-                  {/* Gruppe 1: Anfragen + Profil */}
+                  {/* Gruppe 1 */}
                   <div className="py-1">
-                    <Link
-                      href="/mein-bereich/anfragen"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
+                    <Link href="/mein-bereich/anfragen" onClick={() => setOpen(false)}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <span>🔖</span>
+                        <span>📋</span>
                         <span className="text-sm text-gray-800 font-medium">Meine Anfragen</span>
                       </div>
                       {hasPending && (
@@ -167,11 +182,8 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
                         </span>
                       )}
                     </Link>
-                    <Link
-                      href="/mein-bereich"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
+                    <Link href="/mein-bereich" onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                       <span>👤</span>
                       <span className="text-sm text-gray-800 font-medium">Profil</span>
                     </Link>
@@ -179,17 +191,14 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
 
                   <div className="border-t border-gray-100" />
 
-                  {/* Gruppe 2: Benachrichtigungen + Einstellungen */}
+                  {/* Gruppe 2 */}
                   <div className="py-1">
                     <div className="flex items-center gap-3 px-4 py-3 text-gray-300 cursor-not-allowed select-none">
                       <span>🔔</span>
                       <span className="text-sm font-medium">Benachrichtigungen</span>
                     </div>
-                    <Link
-                      href="/mein-bereich"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
+                    <Link href="/mein-bereich" onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                       <span>⚙️</span>
                       <span className="text-sm text-gray-800 font-medium">Kontoeinstellungen</span>
                     </Link>
@@ -197,12 +206,9 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
 
                   <div className="border-t border-gray-100" />
 
-                  {/* Gruppe 3: Anbieter-CTA */}
-                  <Link
-                    href="/anbieter/listings/neu"
-                    onClick={() => setOpen(false)}
-                    className="flex gap-3 items-start px-4 py-4 bg-pink-50 hover:bg-pink-100 transition-colors"
-                  >
+                  {/* Gruppe 3: CTA */}
+                  <Link href="/anbieter/listings/neu" onClick={() => setOpen(false)}
+                    className="flex gap-3 items-start px-4 py-4 bg-gray-50 hover:bg-gray-100 transition-colors">
                     <span className="text-2xl shrink-0 mt-0.5">🎪</span>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Anbieter werden</p>
@@ -215,11 +221,8 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
                   {isAdmin && (
                     <>
                       <div className="border-t border-gray-100" />
-                      <Link
-                        href="/admin"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
+                      <Link href="/admin" onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                         <span>🛠️</span>
                         <span className="text-sm text-gray-800 font-medium">Admin</span>
                       </Link>
@@ -230,10 +233,8 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
 
                   {/* Gruppe 4: Abmelden */}
                   <div className="py-1">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                    >
+                    <button onClick={handleLogout}
+                      className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
                       Abmelden
                     </button>
                   </div>
