@@ -5,28 +5,40 @@ import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ADMIN_USER_ID } from '@/lib/admin'
+import { KATEGORIEN } from '@/lib/constants'
+
+const EMOJI = {
+  fahrgeschaefte:  '🎡',
+  gastro:          '🍽️',
+  unterhaltung:    '🎵',
+  ausstattung:     '💡',
+  sanitaer_service:'🚿',
+}
+
+const TAB_LABEL = {
+  fahrgeschaefte:  'Fahrgeschäfte',
+  gastro:          'Gastro',
+  unterhaltung:    'Unterhaltung',
+  ausstattung:     'Ausstattung',
+  sanitaer_service:'Sanitär',
+}
 
 export default function NavClient({ initialUser = null, initialProfile = null, initialPendingCount = 0 }) {
   const router   = useRouter()
   const pathname = usePathname()
 
-  // Initial state kommt vom Server — kein Flicker beim ersten Render
   const [user, setUser]                 = useState(initialUser)
   const [profile, setProfile]           = useState(initialProfile)
   const [pendingCount, setPendingCount] = useState(initialPendingCount)
   const [open, setOpen]                 = useState(false)
   const dropdownRef                     = useRef(null)
 
-  // Nur auf Auth-Änderungen reagieren (Login/Logout innerhalb der SPA)
-  // INITIAL_SESSION überspringen — server hat bereits korrekten Zustand geliefert
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'INITIAL_SESSION') return
-
         const newUser = session?.user ?? null
         setUser(newUser)
-
         if (newUser) {
           const [profileRes, pendingRes] = await Promise.all([
             supabase.from('profiles').select('display_name, role').eq('id', newUser.id).single(),
@@ -60,118 +72,172 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
     router.push('/login')
   }
 
-  // Admin-Bereich hat eigene Navigation — kein Root-Nav anzeigen
   if (pathname.startsWith('/admin')) return null
 
   const isAdmin    = user?.id === ADMIN_USER_ID
   const hasPending = pendingCount > 0
-  const initial    = profile?.display_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
-
-  const menuLink = (href, label, extra) => (
-    <Link
-      href={href}
-      onClick={() => setOpen(false)}
-      className="flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-    >
-      {label}
-      {extra}
-    </Link>
-  )
+  const initial    = profile?.display_name?.[0]?.toUpperCase()
+                  ?? user?.email?.[0]?.toUpperCase()
+                  ?? '?'
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
 
-        {/* ── Links: Logo + Marktplatz ───────────────────────────── */}
-        <div className="flex-1 flex items-center gap-5">
-          <Link href="/" className="shrink-0 flex items-center gap-2">
-            <Image src="/logo.png" alt="Festly" width={150} height={40} className="h-9 w-auto" />
-            <span className="text-xl font-bold gradient-text leading-none">Festly</span>
-          </Link>
-          <Link
-            href="/marktplatz"
-            className="hidden sm:block text-sm font-medium gradient-text hover:opacity-80 transition-opacity"
-          >
-            Marktplatz
-          </Link>
-        </div>
+        {/* ── Logo ──────────────────────────────────────────────────────── */}
+        <Link href="/" className="shrink-0 flex items-center gap-1.5 mr-2">
+          <Image src="/logo.png" alt="Festly" width={120} height={36} className="h-8 w-auto" />
+          <span className="text-lg font-bold gradient-text leading-none hidden sm:block">Festly</span>
+        </Link>
 
-        {/* ── Mitte: So funktioniert's ───────────────────────────── */}
-        <div className="hidden md:flex justify-center">
-          <Link
-            href="/so-funktionierts"
-            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
-              pathname === '/so-funktionierts'
-                ? 'font-medium gradient-text'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            So funktioniert&apos;s
-          </Link>
-        </div>
-
-        {/* ── Rechts: Avatar / Login ─────────────────────────────── */}
-        <div className="flex-1 flex items-center justify-end gap-2">
-          {!profile && (
-            <>
+        {/* ── Kategorie-Tabs (horizontal scrollbar) ─────────────────────── */}
+        <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-0.5 min-w-max">
+            {KATEGORIEN.map(k => (
               <Link
-                href="/login"
-                className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:border-gray-400 transition-colors hidden sm:block"
+                key={k.id}
+                href={`/marktplatz?kategorie=${k.id}`}
+                className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-center whitespace-nowrap hover:bg-gray-100 transition-colors group"
               >
-                Anmelden
+                <span className="text-lg leading-none">{EMOJI[k.id]}</span>
+                <span className="text-xs font-medium text-gray-500 group-hover:text-gray-900 transition-colors">
+                  {TAB_LABEL[k.id]}
+                </span>
               </Link>
-              <Link href="/register" className="text-sm px-4 py-2 btn-primary whitespace-nowrap">
-                Registrieren
-              </Link>
-            </>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Rechts: Auth ──────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/anbieter/listings/neu"
+            className="hidden md:block text-sm font-medium text-gray-700 hover:text-gray-900 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors whitespace-nowrap"
+          >
+            Anbieter werden
+          </Link>
+
+          {/* Nicht eingeloggt */}
+          {!profile && (
+            <Link
+              href="/login"
+              className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-1.5 hover:shadow-md transition-shadow text-sm text-gray-700 font-medium"
+            >
+              <span className="text-base">☰</span>
+              <span className="hidden sm:block">Anmelden</span>
+            </Link>
           )}
 
+          {/* Eingeloggt */}
           {profile && (
             <div ref={dropdownRef} className="relative">
-              {/* Avatar */}
+              {/* Avatar + Hamburger */}
               <button
-                onClick={() => setOpen((o) => !o)}
+                onClick={() => setOpen(o => !o)}
                 aria-label="Konto-Menü"
-                className="relative w-9 h-9 rounded-full btn-primary flex items-center justify-center text-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+                className="flex items-center gap-2 border border-gray-200 rounded-full pl-3 pr-1 py-1 hover:shadow-md transition-shadow"
               >
-                {initial}
-                {hasPending && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
-                )}
+                <span className="text-gray-600 text-sm">☰</span>
+                <div className="relative w-8 h-8 rounded-full btn-primary flex items-center justify-center text-white text-sm font-bold">
+                  {initial}
+                  {hasPending && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                  )}
+                </div>
               </button>
 
               {/* Dropdown */}
               {open && (
-                <div className="absolute right-0 top-12 w-60 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{profile.display_name}</p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{user?.email}</p>
-                  </div>
+                <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
 
+                  {/* Gruppe 1: Anfragen + Profil */}
                   <div className="py-1">
-                    {menuLink('/mein-bereich', 'Mein Bereich')}
-                    {menuLink(
-                      '/mein-bereich/anfragen',
-                      'Anfragen & Buchungen',
-                      hasPending && (
-                        <span className="ml-2 min-w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1.5 font-medium">
+                    <Link
+                      href="/mein-bereich/anfragen"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span>🔖</span>
+                        <span className="text-sm text-gray-800 font-medium">Meine Anfragen</span>
+                      </div>
+                      {hasPending && (
+                        <span className="min-w-[20px] h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1.5 font-semibold">
                           {pendingCount}
                         </span>
-                      )
-                    )}
-                    {menuLink('/anbieter/listings', 'Meine Angebote')}
-                    {menuLink('/anbieter/listings/neu', '+ Neues Angebot')}
-                    {isAdmin && menuLink('/admin', 'Admin')}
+                      )}
+                    </Link>
+                    <Link
+                      href="/mein-bereich"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <span>👤</span>
+                      <span className="text-sm text-gray-800 font-medium">Profil</span>
+                    </Link>
                   </div>
 
-                  <div className="border-t border-gray-100 py-1">
+                  <div className="border-t border-gray-100" />
+
+                  {/* Gruppe 2: Benachrichtigungen + Einstellungen */}
+                  <div className="py-1">
+                    <div className="flex items-center gap-3 px-4 py-3 text-gray-300 cursor-not-allowed select-none">
+                      <span>🔔</span>
+                      <span className="text-sm font-medium">Benachrichtigungen</span>
+                    </div>
+                    <Link
+                      href="/mein-bereich"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <span>⚙️</span>
+                      <span className="text-sm text-gray-800 font-medium">Kontoeinstellungen</span>
+                    </Link>
+                  </div>
+
+                  <div className="border-t border-gray-100" />
+
+                  {/* Gruppe 3: Anbieter-CTA */}
+                  <Link
+                    href="/anbieter/listings/neu"
+                    onClick={() => setOpen(false)}
+                    className="flex gap-3 items-start px-4 py-4 bg-pink-50 hover:bg-pink-100 transition-colors"
+                  >
+                    <span className="text-2xl shrink-0 mt-0.5">🎪</span>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Anbieter werden</p>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                        Erstelle dein erstes Angebot und verdiene auf Festly
+                      </p>
+                    </div>
+                  </Link>
+
+                  {isAdmin && (
+                    <>
+                      <div className="border-t border-gray-100" />
+                      <Link
+                        href="/admin"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <span>🛠️</span>
+                        <span className="text-sm text-gray-800 font-medium">Admin</span>
+                      </Link>
+                    </>
+                  )}
+
+                  <div className="border-t border-gray-100" />
+
+                  {/* Gruppe 4: Abmelden */}
+                  <div className="py-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                      className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                     >
                       Abmelden
                     </button>
                   </div>
+
                 </div>
               )}
             </div>
