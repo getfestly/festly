@@ -114,7 +114,7 @@ export default function MeinBereichPage() {
     )
   }
 
-  const initial    = profile?.display_name?.[0]?.toUpperCase() ?? '?'
+  const initial    = profile?.display_name?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? '?'
   const isAdmin    = userId === ADMIN_USER_ID
   const isProvider = profile?.role === 'provider' || listings.length > 0
   const pending    = customerBookings.filter((b) => ['pending', 'accepted'].includes(b.status)).length
@@ -150,16 +150,14 @@ export default function MeinBereichPage() {
                     ✓ Zahlungen aktiv
                   </span>
                 ) : (
-                  <div>
-                    {stripeError && (
-                      <p className="text-xs text-red-600 mb-2">{stripeError}</p>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">Stripe-Konto noch nicht eingerichtet</span>
                     <button
                       onClick={handleStripeOnboard}
                       disabled={stripeLoading}
-                      className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50"
                     >
-                      {stripeLoading ? 'Weiterleitung …' : '⚡ Stripe einrichten'}
+                      {stripeLoading ? 'Weiterleitung …' : 'Jetzt einrichten'}
                     </button>
                   </div>
                 )}

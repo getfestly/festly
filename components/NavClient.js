@@ -65,7 +65,7 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
 
   const isAdmin    = user?.id === ADMIN_USER_ID
   const hasPending = pendingCount > 0
-  const initial    = profile?.display_name?.[0]?.toUpperCase() ?? '?'
+  const initial    = profile?.display_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
 
   const menuLink = (href, label, extra) => (
     <Link
