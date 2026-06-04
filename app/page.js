@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Nav from '@/components/Nav'
 import { KATEGORIEN_FLAT } from '@/lib/constants'
 
 const KATEGORIE_EMOJIS = {
@@ -37,7 +36,6 @@ const STEPS = [
 export default function Home() {
   return (
     <main className="flex-1">
-      <Nav />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section

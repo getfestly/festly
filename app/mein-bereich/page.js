@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { ADMIN_USER_ID } from '@/lib/admin'
 import { KATEGORIE_LABEL } from '@/lib/constants'
-import Nav from '@/components/Nav'
 
 const STATUS_CONFIG = {
   pending:   { label: 'Ausstehend',     cls: 'bg-amber-100 text-amber-700' },
@@ -108,7 +107,6 @@ export default function MeinBereichPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
-        <Nav />
         <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
@@ -125,8 +123,7 @@ export default function MeinBereichPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Nav />
-      <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
+            <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
 
         {/* ══ SEKTION 1: Profil-Header ══════════════════════════════ */}
         <section className="flex items-start gap-6">

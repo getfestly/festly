@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import Nav from '@/components/Nav'
 import BookingChat from '@/components/BookingChat'
 import { trackEvent } from '@/lib/analytics'
 
@@ -164,7 +163,6 @@ export default function AnfragenPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
         <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
@@ -184,8 +182,7 @@ export default function AnfragenPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
-      <main className="max-w-2xl mx-auto px-4 py-8">
+            <main className="max-w-2xl mx-auto px-4 py-8">
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Anfragen & Buchungen</h1>
 

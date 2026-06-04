@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import Nav from '@/components/Nav'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 
@@ -101,7 +100,6 @@ export default function BezahlenPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-md mx-auto px-4 py-8">
         <Link href="/mein-bereich/anfragen" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zu meinen Anfragen

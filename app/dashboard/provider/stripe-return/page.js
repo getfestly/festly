@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { checkAccountStatus } from '@/lib/payments'
-import Nav from '@/components/Nav'
 
 export const metadata = { title: 'Bankkonto verbinden – Festly' }
 
@@ -31,7 +30,6 @@ export default async function StripeReturnPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-md mx-auto px-4 py-16 text-center">
         {complete ? (
           <>

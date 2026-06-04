@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIEN, KATEGORIEN_FLAT, VEHICLE_TYPES, REGION_NAMES } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
-import Nav from '@/components/Nav'
 
 const MAX_PHOTOS = 10
 
@@ -185,7 +184,6 @@ export default function NeuesListingPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
         <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
@@ -217,8 +215,7 @@ export default function NeuesListingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
-      <main className="max-w-lg mx-auto px-4 py-8">
+            <main className="max-w-lg mx-auto px-4 py-8">
         <Link href="/anbieter/listings" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zu meinen Angeboten
         </Link>

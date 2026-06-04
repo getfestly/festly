@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import PosthogProvider from "@/components/PosthogProvider";
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
     >
       <body className="min-h-full flex flex-col">
         <PosthogProvider>
+          <Nav />
           {children}
           <Footer />
         </PosthogProvider>

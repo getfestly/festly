@@ -2,7 +2,6 @@
 import { Suspense, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import Nav from '@/components/Nav'
 import { trackEvent } from '@/lib/analytics'
 
 // useSearchParams benötigt Suspense-Grenze
@@ -21,7 +20,6 @@ function DankeContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-md mx-auto px-4 py-16 text-center">
         {success ? (
           <>

@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { ADMIN_USER_ID } from '@/lib/admin'
-import Nav from '@/components/Nav'
 import Link from 'next/link'
 import FilterSection from './FilterSection'
 
@@ -106,7 +105,6 @@ export default async function MarktplatzPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Marktplatz</h1>
         <QuickActions role={userId ? 'user' : null} isAdmin={isAdmin} />

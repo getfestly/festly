@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL } from '@/lib/constants'
-import Nav from '@/components/Nav'
 
 export default function AnbieterListingsPage() {
   const router = useRouter()
@@ -39,8 +38,7 @@ export default function AnbieterListingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
-        <main className="flex items-center justify-center h-48">
+                <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
       </div>
@@ -49,8 +47,7 @@ export default function AnbieterListingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
-      <main className="max-w-2xl mx-auto px-4 py-8">
+            <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Meine Angebote</h1>
           <Link

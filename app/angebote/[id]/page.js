@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 import { KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 import { trackEvent } from '@/lib/analytics'
 import { formatPreis, formatPreisDetail } from '@/lib/pricing'
-import Nav from '@/components/Nav'
 
 export default function AngebotDetailPage() {
   const { id } = useParams()
@@ -74,8 +73,7 @@ export default function AngebotDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
-        <main className="flex items-center justify-center h-48">
+          <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
       </div>
@@ -92,7 +90,6 @@ export default function AngebotDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <Link href="/marktplatz" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Marktplatz

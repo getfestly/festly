@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import Nav from '@/components/Nav'
 
 export default function BewertungPage() {
   const { id: listingId } = useParams()
@@ -76,7 +75,6 @@ export default function BewertungPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
         <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
@@ -87,7 +85,6 @@ export default function BewertungPage() {
   if (done) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Nav />
         <main className="flex items-center justify-center px-4 py-24">
           <div className="text-center">
             <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
@@ -109,8 +106,7 @@ export default function BewertungPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
-      <main className="max-w-md mx-auto px-4 py-8">
+            <main className="max-w-md mx-auto px-4 py-8">
         <Link href={`/angebote/${listingId}`} className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Angebot
         </Link>

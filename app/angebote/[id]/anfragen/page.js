@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { submitBooking } from '@/app/actions/booking'
-import Nav from '@/components/Nav'
 import { trackEvent } from '@/lib/analytics'
 import { VEHICLE_TYPES } from '@/lib/constants'
 
@@ -351,8 +350,7 @@ export default function AnfragenPage() {
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-gray-50"><Nav />
-        <main className="flex items-center justify-center h-48">
+      <div className="min-h-screen bg-gray-50">        <main className="flex items-center justify-center h-48">
           <p className="text-gray-400">Laden …</p>
         </main>
       </div>
@@ -392,7 +390,6 @@ export default function AnfragenPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="max-w-md mx-auto px-4 py-8">
         <Link href={`/angebote/${listingId}`} className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Angebot
