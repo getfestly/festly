@@ -1,57 +1,56 @@
-'use client'
-import { Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseServer } from '@/lib/supabase-server'
 import SearchBar from '@/components/SearchBar'
 import ListingCard from '@/components/ListingCard'
-import { useFetch } from '@/lib/useFetch'
 
-function MarktplatzContent() {
-  const searchParams   = useSearchParams()
-  const activeCategory = searchParams.get('kategorie') ?? ''
-  const activeRegion   = searchParams.get('region')   ?? ''
-  const activeDate     = searchParams.get('datum')    ?? null
+// searchParams macht die Route automatisch dynamic (kein Static Prerendering)
+function param(v) {
+  return Array.isArray(v) ? v[0] : v
+}
 
-  async function fetchListings() {
-    let query = supabase
-      .from('listings')
-      .select('id, title, category, region, price_cents, price_model, photos')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+export default async function HomePage({ searchParams }) {
+  const params         = await searchParams
+  const activeCategory = param(params?.kategorie) ?? ''
+  const activeRegion   = param(params?.region)    ?? ''
+  const activeDate     = param(params?.datum)      ?? null
 
-    if (activeCategory) query = query.eq('category', activeCategory)
-    if (activeRegion)   query = query.ilike('region', `%${activeRegion}%`)
+  const supabase = await createSupabaseServer()
 
-    // Für gewähltes Datum bereits gebuchte Listings ausblenden
-    if (activeDate) {
-      try {
-        const { data: booked } = await supabase
-          .from('bookings')
-          .select('listing_id')
-          .in('status', ['accepted', 'paid', 'completed'])
-          .not('listing_id', 'is', null)
-          .eq('event_date', activeDate)
-        const ids = (booked ?? []).map(b => b.listing_id).filter(Boolean)
-        if (ids.length) query = query.not('id', 'in', `(${ids.join(',')})`)
-      } catch {
-        // RLS verhindert Lesezugriff — Datum-Filter übersprungen
-      }
+  let query = supabase
+    .from('listings')
+    .select('id, title, category, region, price_cents, price_model, photos')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+
+  if (activeCategory) query = query.eq('category', activeCategory)
+  if (activeRegion)   query = query.ilike('region', `%${activeRegion}%`)
+
+  // Für gewähltes Datum bereits gebuchte Listings ausblenden
+  if (activeDate) {
+    try {
+      const { data: booked } = await supabase
+        .from('bookings')
+        .select('listing_id')
+        .in('status', ['accepted', 'paid', 'completed'])
+        .not('listing_id', 'is', null)
+        .eq('event_date', activeDate)
+      const ids = (booked ?? []).map(b => b.listing_id).filter(Boolean)
+      if (ids.length) query = query.not('id', 'in', `(${ids.join(',')})`)
+    } catch {
+      // RLS verhindert Lesezugriff für anon — Datum-Filter übersprungen
     }
-
-    const { data, error } = await query
-    if (error) console.error('[Marktplatz] Fehler:', error)
-    return data ?? []
   }
 
-  const { data, loading } = useFetch(fetchListings, [activeCategory, activeRegion, activeDate])
+  const { data, error } = await query
+  if (error) console.error('[Startseite] Fehler:', error)
   const listings = data ?? []
 
   return (
     <main className="flex-1 min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4">
 
-        {/* Suchleiste — key erzwingt Remount wenn URL-Params wechseln */}
+        {/* key erzwingt SearchBar-Remount wenn URL-Params wechseln,
+            damit useState(initialX) die neuen Werte übernimmt */}
         <div className="py-6">
           <SearchBar
             key={`${activeCategory}-${activeDate}-${activeRegion}`}
@@ -62,18 +61,14 @@ function MarktplatzContent() {
         </div>
 
         {/* Ergebniszähler — nur bei aktiven Filtern */}
-        {!loading && (activeCategory || activeRegion || activeDate) && (
+        {(activeCategory || activeRegion || activeDate) && (
           <p className="text-xs text-gray-300 mb-4">
             {listings.length} {listings.length === 1 ? 'Angebot' : 'Angebote'} gefunden
           </p>
         )}
 
         {/* Listings */}
-        {loading ? (
-          <div className="text-center py-20">
-            <p className="text-gray-400">Angebote werden geladen …</p>
-          </div>
-        ) : listings.length === 0 ? (
+        {listings.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-400 mb-2">Keine Angebote gefunden.</p>
             <Link href="/"
@@ -88,13 +83,5 @@ function MarktplatzContent() {
         )}
       </div>
     </main>
-  )
-}
-
-export default function HomePage() {
-  return (
-    <Suspense>
-      <MarktplatzContent />
-    </Suspense>
   )
 }
