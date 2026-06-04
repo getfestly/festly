@@ -21,21 +21,27 @@ function LoginForm() {
     setError(null)
     setLoading(true)
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
 
-    if (authError) { setError(authError.message); setLoading(false); return }
+      if (authError) { setError(authError.message); return }
 
-    if (!data.user?.email_confirmed_at) {
-      router.push('/auth/verify-email')
-      return
+      if (!data.user?.email_confirmed_at) {
+        router.push('/auth/verify-email')
+        return
+      }
+
+      trackEvent('user_logged_in', {})
+      identifyUser(data.user.id, { email: data.user.email })
+      router.push('/')
+    } catch (err) {
+      setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
+    } finally {
+      setLoading(false)
     }
-
-    trackEvent('user_logged_in', {})
-    identifyUser(data.user.id, { email: data.user.email })
-    router.push('/marktplatz')
   }
 
   return (
