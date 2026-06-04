@@ -124,7 +124,7 @@ export default function SearchBar({ initialCategory = '', initialDate = null, in
     if (selectedCategory) p.set('kategorie', selectedCategory)
     if (selectedDate)     p.set('datum',     selectedDate)
     if (selectedRegion)   p.set('region',    selectedRegion)
-    router.push('/marktplatz' + (p.toString() ? '?' + p.toString() : ''))
+    router.push('/' + (p.toString() ? '?' + p.toString() : ''))
     setActiveField(null)
   }
 

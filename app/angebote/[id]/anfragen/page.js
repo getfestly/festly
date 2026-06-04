@@ -254,7 +254,7 @@ export default function AnfragenPage() {
           .eq('id', listingId).eq('is_active', true).single(),
       ])
 
-      if (!listingRes.data) { router.replace('/marktplatz'); return }
+      if (!listingRes.data) { router.replace('/'); return }
       const listing = listingRes.data
 
       const [profileRes, availRes, bookingRes] = await Promise.all([

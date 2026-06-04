@@ -264,7 +264,7 @@ export default function MeinBereichPage() {
             <div className="border border-gray-200 rounded-2xl p-10 text-center">
               <p className="text-gray-400 text-sm mb-4">Noch nichts gebucht.</p>
               <Link
-                href="/marktplatz"
+                href="/"
                 className="text-sm px-5 py-2.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors"
               >
                 Marktplatz entdecken

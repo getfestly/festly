@@ -238,7 +238,7 @@ export default function AnfragenPage() {
             </p>
             {!isProviderView && (
               <Link
-                href="/marktplatz"
+                href="/"
                 className="bg-gray-900 text-white rounded-xl px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors"
               >
                 Zum Marktplatz

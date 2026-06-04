@@ -28,7 +28,7 @@ export default function BewertungPage() {
 
       const { data: listing } = await supabase
         .from('listings').select('id, title').eq('id', listingId).single()
-      if (!listing) { router.replace('/marktplatz'); return }
+      if (!listing) { router.replace('/'); return }
 
       setUser(user)
       setListing(listing)

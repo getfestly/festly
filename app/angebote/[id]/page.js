@@ -27,7 +27,7 @@ export default function AngebotDetailPage() {
           .eq('is_active', true)
           .single()
 
-        if (!listing) { router.replace('/marktplatz'); return }
+        if (!listing) { router.replace('/'); return }
         setListing(listing)
         trackEvent('listing_detail_viewed', {
           listing_id:  listing.id,
@@ -95,7 +95,7 @@ export default function AngebotDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-2xl mx-auto px-4 py-8">
-        <Link href="/marktplatz" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
+        <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 mb-6 block">
           ← Zurück zum Marktplatz
         </Link>
 

@@ -58,7 +58,7 @@ export default function RegisterPage() {
       if (!data.session) {
         router.push('/auth/verify-email')
       } else {
-        router.push('/marktplatz')
+        router.push('/')
       }
     } catch (err) {
       console.error('[Register] Fehler:', err)
