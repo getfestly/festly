@@ -1,10 +1,11 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SearchBar from '@/components/SearchBar'
 import ListingCard from '@/components/ListingCard'
+import { useFetch } from '@/lib/useFetch'
 
 function MarktplatzContent() {
   const searchParams   = useSearchParams()
@@ -12,55 +13,39 @@ function MarktplatzContent() {
   const activeRegion   = searchParams.get('region')   ?? ''
   const activeDate     = searchParams.get('datum')    ?? null
 
-  const [listings, setListings] = useState([])
-  const [loading,  setLoading]  = useState(true)
+  async function fetchListings() {
+    let query = supabase
+      .from('listings')
+      .select('id, title, category, region, price_cents, price_model, photos')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
 
-  useEffect(() => {
-    let cancelled = false
+    if (activeCategory) query = query.eq('category', activeCategory)
+    if (activeRegion)   query = query.ilike('region', `%${activeRegion}%`)
 
-    async function load() {
-      setLoading(true)
+    // Für gewähltes Datum bereits gebuchte Listings ausblenden
+    if (activeDate) {
       try {
-        let query = supabase
-          .from('listings')
-          .select('id, title, category, region, price_cents, price_model, photos')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-
-        if (activeCategory) query = query.eq('category', activeCategory)
-        if (activeRegion)   query = query.ilike('region', `%${activeRegion}%`)
-
-        // Für gewähltes Datum bereits gebuchte Listings ausblenden
-        if (activeDate) {
-          try {
-            const { data: booked } = await supabase
-              .from('bookings')
-              .select('listing_id')
-              .in('status', ['accepted', 'paid', 'completed'])
-              .not('listing_id', 'is', null)
-              .eq('event_date', activeDate)
-            const ids = (booked ?? []).map(b => b.listing_id).filter(Boolean)
-            if (ids.length) query = query.not('id', 'in', `(${ids.join(',')})`)
-          } catch {
-            // RLS verhindert Lesezugriff — Datum-Filter übersprungen
-          }
-        }
-
-        const { data, error } = await query
-        if (cancelled) return
-        if (error) console.error('[Marktplatz] Fehler:', error)
-        setListings(data ?? [])
-      } catch (err) {
-        if (cancelled) return
-        console.error('[Marktplatz] Unerwarteter Fehler:', err)
-        setListings([])
-      } finally {
-        if (!cancelled) setLoading(false)
+        const { data: booked } = await supabase
+          .from('bookings')
+          .select('listing_id')
+          .in('status', ['accepted', 'paid', 'completed'])
+          .not('listing_id', 'is', null)
+          .eq('event_date', activeDate)
+        const ids = (booked ?? []).map(b => b.listing_id).filter(Boolean)
+        if (ids.length) query = query.not('id', 'in', `(${ids.join(',')})`)
+      } catch {
+        // RLS verhindert Lesezugriff — Datum-Filter übersprungen
       }
     }
-    load()
-    return () => { cancelled = true }
-  }, [activeCategory, activeRegion, activeDate])
+
+    const { data, error } = await query
+    if (error) console.error('[Marktplatz] Fehler:', error)
+    return data ?? []
+  }
+
+  const { data, loading } = useFetch(fetchListings, [activeCategory, activeRegion, activeDate])
+  const listings = data ?? []
 
   return (
     <main className="flex-1 min-h-screen bg-white">
