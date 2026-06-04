@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN, KATEGORIEN_FLAT, VEHICLE_TYPES } from '@/lib/constants'
+import { KATEGORIEN, KATEGORIEN_FLAT, VEHICLE_TYPES, REGION_NAMES } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
 import Nav from '@/components/Nav'
 
@@ -91,6 +91,7 @@ export default function BearbeitenPage() {
         subcategory:      listing.subcategory ?? '',
         vehicle_type:     listing.vehicle_type ?? '',
         region:           listing.region ?? '',
+        location_address: listing.location_address ?? '',
         photos:           listing.photos ?? [],
         price_model:      listing.price_model ?? 'flat',
         priceEuro:        listing.price_cents ? (listing.price_cents / 100).toFixed(2) : '',
@@ -187,6 +188,7 @@ export default function BearbeitenPage() {
         price_cents,
         price_unit_label: form.price_unit_label || null,
         region:           form.region || null,
+        location_address: form.location_address || null,
         photos,
         updated_at:       new Date().toISOString(),
       })
@@ -364,12 +366,28 @@ export default function BearbeitenPage() {
 
           {/* Region */}
           <div className="border-t border-gray-100 pt-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Bundesland / Einsatzgebiet</label>
+            <select value={form.region} onChange={set('region')} className={inputCls}>
+              <option value="">— bitte wählen (optional) —</option>
+              {Object.values(REGION_NAMES).sort((a, b) => a.localeCompare(b, 'de')).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              <option value="deutschlandweit">Deutschlandweit</option>
+            </select>
+          </div>
+
+          {/* Standort / Adresse */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Standort / Adresse</label>
             <input
-              type="text" value={form.region} onChange={set('region')}
-              autoComplete="address-level1"
+              type="text" value={form.location_address} onChange={set('location_address')}
+              autoComplete="street-address"
+              placeholder="z.B. Musterstraße 12, 30159 Hannover"
               className={inputCls}
             />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Wird Kunden nach Buchungsabschluss angezeigt.
+            </p>
           </div>
 
           {/* Foto-Verwaltung */}
