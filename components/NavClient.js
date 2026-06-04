@@ -5,15 +5,7 @@ import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ADMIN_USER_ID } from '@/lib/admin'
-import { KATEGORIEN } from '@/lib/constants'
-
-const EMOJI = {
-  fahrgeschaefte:  '🎡',
-  gastro:          '🍽️',
-  unterhaltung:    '🎵',
-  ausstattung:     '💡',
-  sanitaer_service:'🚿',
-}
+import { KATEGORIEN, KATEGORIE_EMOJI } from '@/lib/constants'
 
 const TAB_LABEL = {
   fahrgeschaefte:  'Fahrgeschäfte',
@@ -119,7 +111,7 @@ export default function NavClient() {
                 href={`/?kategorie=${k.id}`}
                 className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-center whitespace-nowrap hover:bg-gray-100 transition-colors group"
               >
-                <span className="text-lg leading-none">{EMOJI[k.id]}</span>
+                <span className="text-lg leading-none">{KATEGORIE_EMOJI[k.id]}</span>
                 <span className="text-xs font-medium text-gray-500 group-hover:text-gray-900 transition-colors">
                   {TAB_LABEL[k.id]}
                 </span>

@@ -6,9 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { submitBooking } from '@/app/actions/booking'
 import { trackEvent } from '@/lib/analytics'
 import { VEHICLE_TYPES } from '@/lib/constants'
-
-const eur = (cents) =>
-  (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+import { eur } from '@/lib/pricing'
 
 // ── Datums-Hilfsfunktionen ────────────────────────────────────────────────────
 

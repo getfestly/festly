@@ -1,15 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { KATEGORIEN, REGION_NAMES } from '@/lib/constants'
-
-const EMOJI = {
-  fahrgeschaefte:  '🎡',
-  gastro:          '🍽️',
-  unterhaltung:    '🎵',
-  ausstattung:     '💡',
-  sanitaer_service:'🚿',
-}
+import { KATEGORIEN, REGION_NAMES, KATEGORIE_EMOJI } from '@/lib/constants'
 
 const KATEGORIE_DESC = {
   fahrgeschaefte:  'Karussells, Achterbahnen & mehr',
@@ -209,7 +201,7 @@ export default function SearchBar({ initialCategory = '', initialDate = null, in
               <button key={k.id} type="button"
                 onClick={() => { setSelectedCategory(k.id); setActiveField(null) }}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${selectedCategory === k.id ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
-                <span className="text-2xl">{EMOJI[k.id]}</span>
+                <span className="text-2xl">{KATEGORIE_EMOJI[k.id]}</span>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{k.label}</p>
                   <p className="text-xs text-gray-400">{KATEGORIE_DESC[k.id]}</p>

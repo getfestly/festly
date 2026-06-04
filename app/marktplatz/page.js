@@ -4,44 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SearchBar from '@/components/SearchBar'
-
-const EMOJI = {
-  fahrgeschaefte:  '🎡',
-  gastro:          '🍽️',
-  unterhaltung:    '🎵',
-  ausstattung:     '💡',
-  sanitaer_service:'🚿',
-}
-
-function ListingCard({ listing }) {
-  const photo = listing.photos?.[0]
-  const emoji = EMOJI[listing.category] ?? '🎪'
-  const preis = (!listing.price_cents || listing.price_model === 'on_request')
-    ? 'Auf Anfrage'
-    : `${(listing.price_cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} / Tag`
-
-  return (
-    <Link href={`/angebote/${listing.id}`} className="group hover:scale-[1.01] transition-all duration-200">
-      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 mb-3">
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt={listing.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl"
-            style={{ background: 'linear-gradient(135deg, #fdf4ff, #f0f9ff)' }}>
-            {emoji}
-          </div>
-        )}
-      </div>
-      <div className="px-0.5">
-        <p className="text-sm font-semibold text-gray-900 truncate">{listing.title}</p>
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{listing.region ?? 'Deutschland'}</p>
-        <p className="text-sm mt-1 font-semibold text-gray-900">{preis}</p>
-      </div>
-    </Link>
-  )
-}
+import ListingCard from '@/components/ListingCard'
 
 function MarktplatzContent() {
   const searchParams   = useSearchParams()

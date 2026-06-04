@@ -4,11 +4,9 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { eur } from '@/lib/pricing'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-
-const eur = (cents) =>
-  (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 
 // ---------------------------------------------------------------------------
 // Inneres Formular — braucht Elements-Kontext
