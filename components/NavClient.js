@@ -60,6 +60,9 @@ export default function NavClient({ initialUser = null, initialProfile = null, i
     router.push('/login')
   }
 
+  // Admin-Bereich hat eigene Navigation — kein Root-Nav anzeigen
+  if (pathname.startsWith('/admin')) return null
+
   const isAdmin    = user?.id === ADMIN_USER_ID
   const hasPending = pendingCount > 0
   const initial    = profile?.display_name?.[0]?.toUpperCase() ?? '?'

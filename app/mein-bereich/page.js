@@ -123,7 +123,7 @@ export default function MeinBereichPage() {
 
   return (
     <div className="min-h-screen bg-white">
-            <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
+      <main className="max-w-2xl mx-auto px-4 py-10 space-y-10">
 
         {/* ══ SEKTION 1: Profil-Header ══════════════════════════════ */}
         <section className="flex items-start gap-6">
