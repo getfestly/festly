@@ -210,12 +210,24 @@ function HomeContent() {
   useEffect(() => {
     async function load() {
       try {
-        const { data, error } = await supabase
+        const { data, error, status, statusText } = await supabase
           .from('listings')
           .select('id, title, category, region, price_cents, price_model, photos')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
-        if (error) console.error('[Startseite] Listings-Fehler:', error.message)
+
+        if (error) {
+          // Fehlerdetails für Debugging (sichtbar in Browser-DevTools → Console)
+          console.error('[Startseite] Listings-Fehler:', {
+            message: error.message,
+            code: error.code,
+            hint: error.hint,
+            details: error.details,
+            status,
+            statusText,
+          })
+        }
+        console.log(`[Startseite] Listings geladen: ${data?.length ?? 0} Einträge`, { error })
         setListings(data ?? [])
       } catch (err) {
         console.error('[Startseite] Unerwarteter Fehler:', err)
