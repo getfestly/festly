@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import BookingChat from '@/components/BookingChat'
 import { trackEvent } from '@/lib/analytics'
+import { calculateCancellationFee } from '@/lib/cancellation'
 
 const STATUS_LABEL = {
   pending:   { label: 'Ausstehend',     bg: 'bg-amber-100',  text: 'text-amber-700' },
@@ -401,13 +402,10 @@ export default function AnfragenPage() {
                         ) : (
                           <button
                             onClick={() => {
-                              const daysUntil = Math.floor(
-                                (new Date(booking.event_date) - new Date()) / (1000 * 60 * 60 * 24)
+                              const { refundCents } = calculateCancellationFee(
+                                booking.amount_cents,
+                                new Date(booking.event_date)
                               )
-                              let refundCents = 0
-                              if (daysUntil >= 30) refundCents = booking.amount_cents
-                              else if (daysUntil >= 14) refundCents = Math.round(booking.amount_cents * 0.5)
-                              else if (daysUntil >= 3)  refundCents = Math.round(booking.amount_cents * 0.25)
                               setConfirmCancel({ bookingId: booking.id, refundCents })
                             }}
                             className="w-full border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"

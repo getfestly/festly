@@ -46,7 +46,7 @@ export default async function HomePage({ searchParams }) {
     }
   }
 
-  const { data, error } = await query
+  const { data, error } = await query.limit(24)
   if (error) console.error('[Startseite] Fehler:', error)
   const listings = data ?? []
 
@@ -82,9 +82,21 @@ export default async function HomePage({ searchParams }) {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-            {listings.map(l => <ListingCard key={l.id} listing={l} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {listings.map(l => <ListingCard key={l.id} listing={l} />)}
+            </div>
+            {!activeCategory && !activeRegion && !activeDate && (
+              <div className="text-center py-10">
+                <Link
+                  href="/marktplatz"
+                  className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold px-8 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  Alle Angebote ansehen →
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
