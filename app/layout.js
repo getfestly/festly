@@ -15,14 +15,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Festly",
-  description: "Der Marktplatz für Event-Dienstleistungen",
+  metadataBase: new URL('https://festly.de'),
+  title: {
+    default: 'Festly – Schausteller, Imbisswagen & Eventausrüstung mieten',
+    template: '%s | Festly',
+  },
+  description: 'Festly ist der Marktplatz für Eventdienstleistungen in Deutschland. Imbisswagen, Hüpfburgen, Fahrgeschäfte, Toilettenwagen und mehr – einfach finden, sicher buchen.',
+  openGraph: {
+    siteName: 'Festly',
+    locale: 'de_DE',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
-      lang="en"
+      lang="de"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

@@ -1,3 +1,8 @@
+export const metadata = {
+  title: 'Festly – Schausteller, Imbisswagen & Eventausrüstung mieten',
+  description: 'Festly ist der Marktplatz für Eventdienstleistungen in Deutschland. Imbisswagen, Hüpfburgen, Fahrgeschäfte, Toilettenwagen und mehr – einfach finden, sicher buchen.',
+}
+
 import Link from 'next/link'
 import { createSupabaseServer } from '@/lib/supabase-server'
 import SearchBar from '@/components/SearchBar'

@@ -9,6 +9,8 @@ export default function Footer() {
           <span className="text-sm text-gray-500">© 2026 Festly</span>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-1">
+          <Link href="/ueber-festly" className="text-sm text-gray-400 hover:text-white transition-colors">Über Festly</Link>
+          <Link href="/faq"         className="text-sm text-gray-400 hover:text-white transition-colors">FAQ</Link>
           <Link href="/impressum"   className="text-sm text-gray-400 hover:text-white transition-colors">Impressum</Link>
           <Link href="/datenschutz" className="text-sm text-gray-400 hover:text-white transition-colors">Datenschutz</Link>
           <Link href="/agb"         className="text-sm text-gray-400 hover:text-white transition-colors">AGB</Link>
