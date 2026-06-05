@@ -1,30 +1,72 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { KATEGORIEN, REGION_NAMES, KATEGORIE_EMOJI } from '@/lib/constants'
+import {
+  KATEGORIE_SLUGS,
+  REGION_SLUGS,
+  ANLASS_SLUGS,
+  regionDbWerte,
+  kategorieDbWerte,
+} from '@/lib/seo-config'
 
-// ── Anlass-Definitionen ───────────────────────────────────────────────────────
+// ISR: Seiten alle 24h neu generieren — neue Anbieter öffnen neue Seiten automatisch
+export const revalidate = 86400
 
-const ANLAESSE = {
-  stadtfest:        { label: 'Stadtfest',        planst: 'ein Stadtfest',         fuer: 'für ein Stadtfest'         },
-  betriebsfeier:    { label: 'Betriebsfeier',    planst: 'eine Betriebsfeier',    fuer: 'für eine Betriebsfeier'    },
-  hochzeit:         { label: 'Hochzeit',          planst: 'eine Hochzeit',         fuer: 'für eine Hochzeit'         },
-  kindergeburtstag: { label: 'Kindergeburtstag', planst: 'einen Kindergeburtstag', fuer: 'für einen Kindergeburtstag' },
-  vereinsfest:      { label: 'Vereinsfest',      planst: 'ein Vereinsfest',       fuer: 'für ein Vereinsfest'       },
-  schuetzenfest:    { label: 'Schützenfest',     planst: 'ein Schützenfest',      fuer: 'für ein Schützenfest'      },
-  geburtstag:       { label: 'Geburtstag',       planst: 'einen Geburtstag',      fuer: 'für einen Geburtstag'      },
-  sommerfest:       { label: 'Sommerfest',       planst: 'ein Sommerfest',        fuer: 'für ein Sommerfest'        },
-  weihnachtsmarkt:  { label: 'Weihnachtsmarkt',  planst: 'einen Weihnachtsmarkt', fuer: 'für einen Weihnachtsmarkt' },
-  firmenevents:     { label: 'Firmenevent',      planst: 'ein Firmenevent',       fuer: 'für ein Firmenevent'       },
+// ── Supabase-REST-Hilfsfunktion ───────────────────────────────────────────────
+// Kein Cookie-Zugriff (cookies() würde Route dynamisch machen und generateStaticParams blockieren)
+
+async function fetchListings(katWerte, regWerte) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return []
+  try {
+    const qs = new URLSearchParams({
+      select: 'id,title,description,price_cents,price_model,photos,region',
+      'is_active': 'eq.true',
+      'category': `in.(${katWerte.join(',')})`,
+      'region': `in.(${regWerte.join(',')})`,
+      limit: '12',
+    })
+    const res = await fetch(`${url}/rest/v1/listings?${qs}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      next: { revalidate: 86400 },
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
 }
 
-// ── Static Params ─────────────────────────────────────────────────────────────
+// ── generateStaticParams ──────────────────────────────────────────────────────
+// Nur Kombinationen generieren, für die mindestens 1 aktiver Anbieter existiert.
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  let listings = []
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return []
+    const res = await fetch(
+      `${url}/rest/v1/listings?is_active=eq.true&select=category,region`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    )
+    if (res.ok) listings = await res.json()
+  } catch {
+    return []
+  }
+
   const params = []
-  for (const kat of KATEGORIEN) {
-    for (const reg of Object.keys(REGION_NAMES)) {
-      for (const anl of Object.keys(ANLAESSE)) {
-        params.push({ kategorie: kat.id, region: reg, anlass: anl })
+  for (const kategorieSlug of Object.keys(KATEGORIE_SLUGS)) {
+    const katWerte = kategorieDbWerte(kategorieSlug)
+    for (const regionSlug of Object.keys(REGION_SLUGS)) {
+      const regWerte = regionDbWerte(regionSlug)
+      const hatAnbieter = listings.some(
+        l => katWerte.includes(l.category) && regWerte.includes(l.region)
+      )
+      if (hatAnbieter) {
+        for (const anlassSlug of Object.keys(ANLASS_SLUGS)) {
+          params.push({ kategorie: kategorieSlug, region: regionSlug, anlass: anlassSlug })
+        }
       }
     }
   }
@@ -35,113 +77,140 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }) {
   const { kategorie, region, anlass } = await params
-  const kat = KATEGORIEN.find(k => k.id === kategorie)
-  const reg = REGION_NAMES[region]
-  const anl = ANLAESSE[anlass]
+  const kat = KATEGORIE_SLUGS[kategorie]
+  const reg = REGION_SLUGS[region]
+  const anl = ANLASS_SLUGS[anlass]
   if (!kat || !reg || !anl) return {}
   return {
-    title: `${kat.label} ${anl.fuer} in ${reg} mieten`,
-    description: `${kat.label} ${anl.fuer} in ${reg} finden und sicher buchen. Geprüfte Anbieter auf Festly – mit Treuhand-Bezahlung und direktem Anbieter-Kontakt.`,
+    title: `${kat.label} mieten ${reg.label} – ${anl.label}`,
+    description: `${kat.label} ${anl.beschreibung} in ${reg.label} mieten. Geprüfte Anbieter, sichere Buchung mit Treuhand-Bezahlung. Jetzt auf Festly finden.`,
   }
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function ProgrammaticSEOPage({ params }) {
+export default async function SEOLandingPage({ params }) {
   const { kategorie, region, anlass } = await params
 
-  const kat = KATEGORIEN.find(k => k.id === kategorie)
-  const reg = REGION_NAMES[region]
-  const anl = ANLAESSE[anlass]
+  const kat = KATEGORIE_SLUGS[kategorie]
+  const reg = REGION_SLUGS[region]
+  const anl = ANLASS_SLUGS[anlass]
 
   if (!kat || !reg || !anl) notFound()
 
-  const emoji   = KATEGORIE_EMOJI[kat.id] ?? '🎪'
-  const ctaHref = `/?kategorie=${kat.id}&region=${encodeURIComponent(reg)}`
+  const katWerte = kategorieDbWerte(kategorie)
+  const regWerte = regionDbWerte(region)
+  const listings = await fetchListings(katWerte, regWerte)
+
+  if (!listings.length) notFound()
+
+  const ctaHref = `/?kategorie=${kat.dbWert}&region=${encodeURIComponent(reg.label)}`
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${kat.label} ${anl.beschreibung} in ${reg.label}`,
+    description: `${kat.label} mieten in ${reg.label} für ${anl.label} – geprüfte Anbieter auf Festly`,
+    numberOfItems: listings.length,
+    itemListElement: listings.map((l, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: l.title,
+      url: `https://festly.de/angebote/${l.id}`,
+    })),
+  }
 
   return (
     <main className="flex-1 min-h-screen bg-white">
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="max-w-5xl mx-auto px-4 py-12">
 
-        {/* Hero */}
-        <div className="mb-8">
-          <p className="text-4xl mb-3">{emoji}</p>
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-4">
-            {kat.label} {anl.fuer} in {reg}
-          </h1>
-          <p className="text-gray-600 text-lg leading-relaxed">
-            Du planst {anl.planst} in {reg} und suchst {kat.label.toLowerCase()}?
-            Auf Festly findest du geprüfte Anbieter aus {reg} – direkt anfragen,
-            sicher buchen.
-          </p>
+        {/* Breadcrumb */}
+        <nav className="text-sm text-gray-400 mb-6 flex flex-wrap gap-1 items-center">
+          <Link href="/" className="hover:text-gray-700 transition-colors">Festly</Link>
+          <span>›</span>
+          <Link href={`/?kategorie=${kat.dbWert}`} className="hover:text-gray-700 transition-colors">{kat.label}</Link>
+          <span>›</span>
+          <span className="text-gray-600">{reg.label}</span>
+          <span>›</span>
+          <span className="text-gray-600">{anl.label}</span>
+        </nav>
+
+        {/* H1 */}
+        <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-4">
+          {kat.emoji} {kat.label} mieten in {reg.label} – {anl.label}
+        </h1>
+
+        {/* Intro */}
+        <p className="text-gray-600 text-lg mb-4 leading-relaxed">
+          Du planst {anl.beschreibung} in {reg.label} und suchst {kat.label.toLowerCase()}?
+          Auf Festly findest du{' '}
+          <strong>{listings.length} geprüfte{listings.length === 1 ? 'n Anbieter' : ' Anbieter'}</strong>{' '}
+          in {reg.label} – einfach anfragen, sicher buchen.
+        </p>
+
+        {/* Trust-Callout */}
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-xl p-4 mb-8 text-sm text-gray-700">
+          🔒 <strong>Treuhand-Bezahlung:</strong> Dein Geld liegt sicher bei Festly bis nach dem
+          Event. Erst dann wird an den Anbieter ausgezahlt.
         </div>
 
-        {/* Unterkategorien */}
-        <section className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">
-            Angebote in der Kategorie „{kat.label}"
-          </h2>
-          <ul className="space-y-2">
-            {kat.subcategories.map(sub => (
-              <li key={sub.id} className="flex items-start gap-2 text-gray-700">
-                <span className="mt-1 h-2 w-2 rounded-full bg-pink-500 shrink-0" />
-                {sub.label}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Vorteile */}
-        <section className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">
-            Warum Festly für dein {anl.label}?
-          </h2>
-          <div className="space-y-3">
-            {[
-              {
-                title: `Anbieter aus ${reg}`,
-                text: `Alle gelisteten Anbieter sind in ${reg} aktiv oder liefern dorthin.`,
-              },
-              {
-                title: 'Treuhand-Bezahlung',
-                text: 'Deine Zahlung liegt sicher bei Festly – nicht beim Anbieter. Erst nach deinem Event wird der Betrag ausgezahlt.',
-              },
-              {
-                title: 'Direkte Anfrage',
-                text: 'Du kontaktierst Anbieter direkt über Festly – transparent, ohne Zwischenhändler.',
-              },
-            ].map(({ title, text }) => (
-              <div key={title} className="flex gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold">
-                  ✓
-                </span>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">{title}</p>
-                  <p className="text-gray-500 text-sm">{text}</p>
+        {/* Anbieter-Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          {listings.map(listing => (
+            <Link
+              key={listing.id}
+              href={`/angebote/${listing.id}`}
+              className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+            >
+              {listing.photos?.[0] ? (
+                <img
+                  src={listing.photos[0]}
+                  alt={listing.title}
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-4xl">
+                  {kat.emoji}
                 </div>
+              )}
+              <div className="p-4">
+                <h2 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-2">{listing.title}</h2>
+                {listing.description && (
+                  <p className="text-xs text-gray-500 line-clamp-2">{listing.description}</p>
+                )}
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Treuhand-Callout */}
-        <div className="rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-purple-50 p-6 mb-8">
-          <p className="text-gray-800 font-medium leading-relaxed">
-            🔒 <strong>Treuhand-Schutz auf Festly:</strong> Deine Zahlung{' '}
-            {anl.fuer} ist bei Festly hinterlegt und wird erst nach erfolgreichem
-            Event an den Anbieter freigegeben. So bist du auf der sicheren Seite.
-          </p>
+            </Link>
+          ))}
         </div>
 
         {/* CTA */}
-        <Link
-          href={ctaHref}
-          className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity"
-        >
-          Jetzt {kat.label} in {reg} finden
-        </Link>
+        <div className="text-center mb-12">
+          <Link
+            href={ctaHref}
+            className="inline-block bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold px-8 py-3 rounded-xl hover:opacity-90 transition-opacity"
+          >
+            Alle Anbieter in {reg.label} anzeigen
+          </Link>
+        </div>
+
+        {/* SEO-Text */}
+        <div className="pt-8 border-t border-gray-100 text-sm text-gray-500">
+          <h2 className="font-semibold text-gray-700 mb-2">
+            {kat.label} {anl.beschreibung} in {reg.label} buchen
+          </h2>
+          <p className="leading-relaxed">
+            {kat.beschreibung} Alle Anbieter auf Festly sind verifiziert. Du buchst sicher über
+            Festly mit Treuhand-Bezahlung – dein Geld ist bis nach dem Event geschützt. Einfach
+            Anbieter auswählen, Anfrage senden, Event genießen.
+          </p>
+        </div>
 
       </div>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     </main>
   )
 }
