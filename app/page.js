@@ -11,10 +11,11 @@ function param(v) {
 }
 
 export default async function HomePage({ searchParams }) {
-  const params       = await searchParams
-  const activeRegion = param(params?.region) ?? ''
-  const activeDate   = param(params?.datum)  ?? null
-  // Kategorie-Filter läuft client-seitig in HomeListings
+  const params          = await searchParams
+  const activeCategory  = param(params?.kategorie) ?? ''
+  const activeRegion    = param(params?.region)    ?? ''
+  const activeDate      = param(params?.datum)     ?? null
+  // Kategorie-Filter läuft client-seitig in HomeListings (initialCategory für SSR)
 
   const supabase = await createSupabaseServer()
 
@@ -50,6 +51,7 @@ export default async function HomePage({ searchParams }) {
       <div className="max-w-7xl mx-auto px-4">
         <HomeListings
           initialListings={listings}
+          initialCategory={activeCategory}
           initialRegion={activeRegion}
           initialDate={activeDate}
         />

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -12,87 +12,102 @@ const SORT_TABS = [
   { id: 'top',     label: 'Top bewertet' },
 ]
 
-function HomeListingsInner({ initialListings, initialRegion, initialDate }) {
-  const sp        = useSearchParams()
-  const activeKat = sp.get('kategorie') ?? ''
+// Unsichtbarer Helfer: liest useSearchParams() isoliert in eigener Suspense-Grenze.
+// Nur diese winzige Komponente braucht Suspense — der Rest rendert sofort ohne Blocking.
+function KategorieSync({ onChange }) {
+  const sp  = useSearchParams()
+  const kat = sp.get('kategorie') ?? ''
+  useEffect(() => { onChange(kat) }, [kat, onChange])
+  return null
+}
 
-  const [sort, setSort] = useState('neu')
-  const [data, setData] = useState({
+export default function HomeListings({
+  initialListings,
+  initialRegion,
+  initialDate,
+  initialCategory = '',
+}) {
+  const [activeKat, setActiveKat] = useState(initialCategory)
+  const [sort, setSort]           = useState('neu')
+  const [data, setData]           = useState({
     neu:     initialListings,
-    beliebt: initialListings, // snaps into sorted order after fetch
+    beliebt: initialListings, // snaps to sorted order after fetch
     top:     initialListings,
   })
 
-  // Sync neu when server re-renders with new date/region filter
+  // useCallback stabilisiert die Referenz für KategorieSync
+  const handleKatChange = useCallback((kat) => setActiveKat(kat), [])
+
+  // Sync neu-Datensatz wenn Server mit neuem Datum-/Regions-Filter re-rendert
   useEffect(() => {
     setData(d => ({ ...d, neu: initialListings }))
   }, [initialListings])
 
-  // On mount: fetch booking counts + review ratings for current listings
+  // Booking-Counts + Review-Ratings für Beliebt/Top-Tabs nachladen
   useEffect(() => {
     let cancelled = false
     async function load() {
       const ids = initialListings.map(l => l.id)
       if (!ids.length) return
+      try {
+        const [bookingRes, reviewRes] = await Promise.all([
+          supabase
+            .from('bookings')
+            .select('listing_id')
+            .in('listing_id', ids)
+            .in('status', ['accepted', 'paid', 'completed']),
+          supabase
+            .from('reviews')
+            .select('listing_id, rating')
+            .in('listing_id', ids),
+        ])
+        if (cancelled) return
 
-      const [bookingRes, reviewRes] = await Promise.all([
-        supabase
-          .from('bookings')
-          .select('listing_id')
-          .in('listing_id', ids)
-          .in('status', ['accepted', 'paid', 'completed']),
-        supabase
-          .from('reviews')
-          .select('listing_id, rating')
-          .in('listing_id', ids),
-      ])
-      if (cancelled) return
+        const bookingCounts = {}
+        for (const { listing_id } of bookingRes.data ?? []) {
+          bookingCounts[listing_id] = (bookingCounts[listing_id] ?? 0) + 1
+        }
+        const ratingMap = {}
+        for (const { listing_id, rating } of reviewRes.data ?? []) {
+          if (!ratingMap[listing_id]) ratingMap[listing_id] = []
+          ratingMap[listing_id].push(rating)
+        }
 
-      // Booking count map
-      const bookingCounts = {}
-      for (const { listing_id } of bookingRes.data ?? []) {
-        bookingCounts[listing_id] = (bookingCounts[listing_id] ?? 0) + 1
+        const base    = [...initialListings]
+        const beliebt = [...base].sort(
+          (a, b) => (bookingCounts[b.id] ?? 0) - (bookingCounts[a.id] ?? 0)
+        )
+        const top = [...base]
+          .map(l => ({
+            ...l,
+            _avg: ratingMap[l.id]?.length
+              ? ratingMap[l.id].reduce((s, r) => s + r, 0) / ratingMap[l.id].length
+              : 0,
+          }))
+          .sort((a, b) => b._avg - a._avg)
+
+        setData(d => ({ ...d, beliebt, top }))
+      } catch (err) {
+        console.error('[HomeListings] sort fetch:', err)
       }
-
-      // Rating map
-      const ratingMap = {}
-      for (const { listing_id, rating } of reviewRes.data ?? []) {
-        if (!ratingMap[listing_id]) ratingMap[listing_id] = []
-        ratingMap[listing_id].push(rating)
-      }
-
-      const base = [...initialListings]
-
-      const beliebt = [...base].sort(
-        (a, b) => (bookingCounts[b.id] ?? 0) - (bookingCounts[a.id] ?? 0)
-      )
-
-      const top = [...base]
-        .map(l => ({
-          ...l,
-          _avg: ratingMap[l.id]?.length
-            ? ratingMap[l.id].reduce((s, r) => s + r, 0) / ratingMap[l.id].length
-            : 0,
-        }))
-        .sort((a, b) => b._avg - a._avg)
-
-      setData(d => ({ ...d, beliebt, top }))
     }
     load()
     return () => { cancelled = true }
   }, [initialListings])
 
   const currentRaw = data[sort] ?? data.neu
-
-  // Client-side category filter
-  const listings = activeKat
+  const listings   = activeKat
     ? currentRaw.filter(l => l.category === activeKat)
     : currentRaw
-
   const isFiltered = !!(activeKat || initialRegion || initialDate)
 
   return (
     <>
+      {/* KategorieSync: useSearchParams() in eigener Mini-Suspense — blockiert den Rest nicht */}
+      <Suspense>
+        <KategorieSync onChange={handleKatChange} />
+      </Suspense>
+
       {/* SearchBar */}
       <div className="py-6">
         <SearchBar
@@ -146,14 +161,5 @@ function HomeListingsInner({ initialListings, initialRegion, initialDate }) {
         </div>
       )}
     </>
-  )
-}
-
-// Suspense wrapper nötig weil useSearchParams() in Next.js 16 eine Suspense-Grenze braucht
-export default function HomeListings(props) {
-  return (
-    <Suspense>
-      <HomeListingsInner {...props} />
-    </Suspense>
   )
 }
