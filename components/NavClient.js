@@ -148,6 +148,13 @@ export default function NavClient() {
                         </span>
                       )}
                     </Link>
+                    {profile?.role === 'provider' && (
+                      <Link href="/anbieter/listings" onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <span>🎪</span>
+                        <span className="text-sm text-gray-800 font-medium">Meine Angebote</span>
+                      </Link>
+                    )}
                     <Link href="/mein-bereich" onClick={() => setOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                       <span>👤</span>
