@@ -1,13 +1,12 @@
 'use client'
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { trackEvent, identifyUser } from '@/lib/analytics'
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const resetSuccess = searchParams.get('reset') === 'success'
   const [form, setForm] = useState({ email: '', password: '' })
@@ -34,16 +33,16 @@ function LoginForm() {
         } else if (msg.includes('Too many requests') || msg.includes('over_request_rate_limit')) {
           setError('Zu viele Versuche. Bitte warte kurz.')
         } else if (msg.includes('Email not confirmed')) {
-          router.push('/auth/verify-email')
+          window.location.href = '/auth/verify-email'
         } else {
           setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
         }
         return
       }
 
-      window.location.href = '/mein-bereich'
       trackEvent('user_logged_in', {})
       identifyUser(data.user.id, { email: data.user.email })
+      window.location.href = '/mein-bereich'
     } catch (err) {
       setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
     } finally {
