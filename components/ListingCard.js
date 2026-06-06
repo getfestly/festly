@@ -3,10 +3,13 @@ import Link from 'next/link'
 import { KATEGORIE_EMOJI, KATEGORIE_LABEL, formatRegion } from '@/lib/constants'
 
 export default function ListingCard({ listing }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const photoFile   = listing.photos?.[0] ?? null
-  const photo       = photoFile
-    ? `${supabaseUrl}/storage/v1/object/public/listing-photos/${photoFile}`
+  const photoFile = listing.photos?.[0] ?? null
+  // getPublicUrl() speichert bereits volle https://-URLs — direkt verwenden.
+  // Fallback für ältere Einträge mit reinem Pfad (ohne https://).
+  const photo = photoFile
+    ? (photoFile.startsWith('https://')
+        ? photoFile
+        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/listing-photos/${photoFile}`)
     : null
   const emoji        = KATEGORIE_EMOJI[listing.category] ?? '🎪'
   const categoryName = KATEGORIE_LABEL[listing.category] ?? 'Event'
