@@ -24,7 +24,8 @@ function KategorieSync({ onChange }) {
 export default function HomeListings({
   initialListings,
   initialRegion,
-  initialDate,
+  initialDateFrom = null,
+  initialDateTo   = null,
   initialCategory = '',
 }) {
   const [activeKat, setActiveKat] = useState(initialCategory)
@@ -99,7 +100,7 @@ export default function HomeListings({
   const listings   = activeKat
     ? currentRaw.filter(l => l.category === activeKat)
     : currentRaw
-  const isFiltered = !!(activeKat || initialRegion || initialDate)
+  const isFiltered = !!(activeKat || initialRegion || initialDateFrom)
 
   return (
     <>
@@ -111,9 +112,10 @@ export default function HomeListings({
       {/* SearchBar */}
       <div className="py-6">
         <SearchBar
-          key={`${activeKat}-${initialDate}-${initialRegion}`}
+          key={`${activeKat}-${initialDateFrom}-${initialDateTo}-${initialRegion}`}
           initialCategory={activeKat}
-          initialDate={initialDate}
+          initialDateFrom={initialDateFrom}
+          initialDateTo={initialDateTo}
           initialRegion={initialRegion}
         />
       </div>

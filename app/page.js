@@ -14,7 +14,8 @@ export default async function HomePage({ searchParams }) {
   const params          = await searchParams
   const activeCategory  = param(params?.kategorie) ?? ''
   const activeRegion    = param(params?.region)    ?? ''
-  const activeDate      = param(params?.datum)     ?? null
+  const activeVon       = param(params?.von)       ?? null
+  const activeBis       = param(params?.bis)       ?? null
   // Kategorie-Filter läuft client-seitig in HomeListings (initialCategory für SSR)
 
   const supabase = await createSupabaseServer()
@@ -27,14 +28,17 @@ export default async function HomePage({ searchParams }) {
 
   if (activeRegion) query = query.ilike('region', `%${activeRegion}%`)
 
-  if (activeDate) {
+  if (activeVon) {
     try {
-      const { data: booked } = await supabase
+      let bookingQ = supabase
         .from('bookings')
         .select('listing_id')
         .in('status', ['accepted', 'paid', 'completed'])
         .not('listing_id', 'is', null)
-        .eq('event_date', activeDate)
+        .gte('event_date', activeVon)
+      if (activeBis) bookingQ = bookingQ.lte('event_date', activeBis)
+      else           bookingQ = bookingQ.eq('event_date', activeVon)
+      const { data: booked } = await bookingQ
       const ids = (booked ?? []).map(b => b.listing_id).filter(Boolean)
       if (ids.length) query = query.not('id', 'in', `(${ids.join(',')})`)
     } catch {
@@ -53,7 +57,8 @@ export default async function HomePage({ searchParams }) {
           initialListings={listings}
           initialCategory={activeCategory}
           initialRegion={activeRegion}
-          initialDate={activeDate}
+          initialDateFrom={activeVon}
+        initialDateTo={activeBis}
         />
       </div>
     </main>

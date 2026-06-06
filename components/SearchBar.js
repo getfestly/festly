@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation'
 import { KATEGORIEN, REGION_NAMES, KATEGORIE_EMOJI } from '@/lib/constants'
 
 const KATEGORIE_DESC = {
-  fahrgeschaefte:  'Karussells, Achterbahnen & mehr',
-  gastro:          'Catering, Foodtrucks & Bars',
-  unterhaltung:    'Musik, DJs & Shows',
-  ausstattung:     'Technik, Licht & Zelte',
-  sanitaer_service:'Toiletten & Sicherheit',
+  fahrgeschaefte:   'Karussells, Achterbahnen & mehr',
+  gastro:           'Catering, Foodtrucks & Bars',
+  unterhaltung:     'Musik, DJs & Shows',
+  ausstattung:      'Technik, Licht & Zelte',
+  sanitaer_service: 'Toiletten & Sicherheit',
 }
 
 const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember']
@@ -24,20 +24,22 @@ function buildDays(year, month) {
 }
 
 function toISO(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function formatDE(iso) {
+function formatShort(iso) {
   if (!iso) return null
-  const [y, m, d] = iso.split('-')
-  return `${d}.${m}.${y}`
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
 }
 
-function CalendarPanel({ value, onChange }) {
+// ── CalendarPanel — Range Picker ──────────────────────────────────────────────
+function CalendarPanel({ dateFrom, dateTo, onDayClick }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [hoverDate, setHoverDate] = useState(null)
 
   const m1 = { year: viewYear, month: viewMonth }
   const m2 = viewMonth === 11
@@ -53,6 +55,17 @@ function CalendarPanel({ value, onChange }) {
     else setViewMonth(m => m + 1)
   }
 
+  // Preview end: dateTo if set, otherwise hoverDate (only when dateFrom set & no dateTo)
+  const previewEnd = dateTo ?? (dateFrom && !dateTo ? hoverDate : null)
+
+  function isStart(iso)   { return iso === dateFrom }
+  function isEnd(iso)     { return iso === dateTo }
+  function isInRange(iso) {
+    if (!dateFrom || !previewEnd) return false
+    const [a, b] = dateFrom < previewEnd ? [dateFrom, previewEnd] : [previewEnd, dateFrom]
+    return iso > a && iso < b
+  }
+
   function renderMonth(year, month, showPrev, showNext) {
     const days = buildDays(year, month)
     return (
@@ -66,24 +79,47 @@ function CalendarPanel({ value, onChange }) {
             ? <button type="button" onClick={goNext} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors">→</button>
             : <div className="w-8" />}
         </div>
+
         <div className="grid grid-cols-7 mb-1">
           {DAYS.map(d => (
             <div key={d} className="text-xs text-center text-gray-400 py-1 font-medium">{d}</div>
           ))}
         </div>
+
         <div className="grid grid-cols-7 gap-y-0.5">
           {days.map((day, i) => {
             if (!day) return <div key={`e${i}`} />
-            const isPast     = day < today
-            const iso        = toISO(day)
-            const isSelected = value === iso
+            const isPast = day < today
+            const iso    = toISO(day)
+            const start  = isStart(iso)
+            const end    = isEnd(iso)
+            const range  = isInRange(iso)
+
+            let cls = 'aspect-square flex items-center justify-center text-sm transition-colors '
+            let style = {}
+
+            if (isPast) {
+              cls += 'text-gray-200 cursor-not-allowed rounded-full'
+            } else if (start || end) {
+              cls += 'rounded-full text-white font-semibold cursor-pointer'
+              style = { background: 'linear-gradient(135deg, #C026A0, #7C3AED)' }
+            } else if (range) {
+              cls += 'bg-purple-100 text-purple-900 rounded-full cursor-pointer hover:bg-purple-200'
+            } else {
+              cls += 'rounded-full text-gray-800 cursor-pointer hover:bg-gray-100'
+            }
+
             return (
-              <button key={i} type="button" disabled={isPast} onClick={() => onChange(iso)}
-                className={[
-                  'aspect-square flex items-center justify-center rounded-full text-sm transition-colors',
-                  isPast     ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-800',
-                  isSelected ? '!bg-gray-900 !text-white'         : '',
-                ].join(' ')}>
+              <button
+                key={i}
+                type="button"
+                disabled={isPast}
+                onClick={() => onDayClick(iso)}
+                onMouseEnter={() => !isPast && setHoverDate(iso)}
+                onMouseLeave={() => setHoverDate(null)}
+                className={cls}
+                style={style}
+              >
                 {day.getDate()}
               </button>
             )
@@ -102,12 +138,25 @@ function CalendarPanel({ value, onChange }) {
   )
 }
 
-// Props: initialCategory, initialDate, initialRegion — vorausgefüllte Werte aus URL-Params
-export default function SearchBar({ initialCategory = '', initialDate = null, initialRegion = '' }) {
+// ── SearchBar ─────────────────────────────────────────────────────────────────
+// Props:
+//   initialCategory   — vorausgefüllte Kategorie aus URL
+//   initialDateFrom   — Von-Datum (ISO) aus URL (?von=)
+//   initialDateTo     — Bis-Datum (ISO) aus URL (?bis=)
+//   initialRegion     — Region aus URL
+//   basePath          — Ziel-Route für Suche (default '/')
+export default function SearchBar({
+  initialCategory  = '',
+  initialDateFrom  = null,
+  initialDateTo    = null,
+  initialRegion    = '',
+  basePath         = '/',
+}) {
   const router = useRouter()
   const [activeField,      setActiveField]      = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [selectedDate,     setSelectedDate]     = useState(initialDate)
+  const [dateFrom,         setDateFrom]         = useState(initialDateFrom)
+  const [dateTo,           setDateTo]           = useState(initialDateTo)
   const [selectedRegion,   setSelectedRegion]   = useState(initialRegion)
   const searchRef = useRef(null)
 
@@ -119,17 +168,45 @@ export default function SearchBar({ initialCategory = '', initialDate = null, in
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  function handleDayClick(iso) {
+    if (!dateFrom || (dateFrom && dateTo)) {
+      // Fresh start
+      setDateFrom(iso)
+      setDateTo(null)
+    } else {
+      // dateFrom gesetzt, dateTo fehlt
+      if (iso === dateFrom) {
+        setDateFrom(null)
+        setDateTo(null)
+      } else if (iso < dateFrom) {
+        setDateFrom(iso)
+        setDateTo(null)
+      } else {
+        setDateTo(iso)
+        setActiveField(null) // Range komplett → Panel schließen
+      }
+    }
+  }
+
   function handleSearch() {
     const p = new URLSearchParams()
     if (selectedCategory) p.set('kategorie', selectedCategory)
-    if (selectedDate)     p.set('datum',     selectedDate)
+    if (dateFrom)         p.set('von',       dateFrom)
+    if (dateTo)           p.set('bis',       dateTo)
     if (selectedRegion)   p.set('region',    selectedRegion)
-    router.push('/' + (p.toString() ? '?' + p.toString() : ''))
+    router.push(basePath + (p.toString() ? '?' + p.toString() : ''))
     setActiveField(null)
   }
 
   const regions          = Object.values(REGION_NAMES).sort((a, b) => a.localeCompare(b, 'de'))
   const selectedCatLabel = KATEGORIEN.find(k => k.id === selectedCategory)?.label ?? null
+
+  // Wann-Label
+  const wann = dateFrom && dateTo
+    ? `${formatShort(dateFrom)} – ${formatShort(dateTo)}`
+    : dateFrom
+    ? `Ab ${formatShort(dateFrom)}`
+    : 'Datum wählen'
 
   const fieldCls = (name) =>
     `flex-1 flex flex-col justify-center px-5 py-3 cursor-pointer min-w-0 transition-colors ${
@@ -158,8 +235,8 @@ export default function SearchBar({ initialCategory = '', initialDate = null, in
           <div className={fieldCls('when')}
             onClick={() => setActiveField(activeField === 'when' ? null : 'when')}>
             <p className="text-xs font-bold text-gray-800 mb-0.5 uppercase tracking-wide">Wann</p>
-            <p className="text-sm text-gray-500 truncate">
-              {selectedDate ? formatDE(selectedDate) : 'Datum wählen'}
+            <p className={`text-sm truncate ${dateFrom ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+              {wann}
             </p>
           </div>
 
@@ -213,16 +290,30 @@ export default function SearchBar({ initialCategory = '', initialDate = null, in
         </div>
       )}
 
-      {/* Panel: Wann */}
+      {/* Panel: Wann — Range Picker */}
       {activeField === 'when' && (
         <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-5">
-          <CalendarPanel value={selectedDate} onChange={d => { setSelectedDate(d); setActiveField(null) }} />
-          {selectedDate && (
-            <button type="button" onClick={() => setSelectedDate(null)}
-              className="mt-3 text-xs text-gray-400 hover:text-gray-700 underline transition-colors">
-              Datum löschen
-            </button>
-          )}
+          <CalendarPanel
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onDayClick={handleDayClick}
+          />
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-400">
+              {!dateFrom
+                ? 'Startdatum wählen'
+                : !dateTo
+                ? 'Enddatum wählen'
+                : `${formatShort(dateFrom)} – ${formatShort(dateTo)}`}
+            </p>
+            {dateFrom && (
+              <button type="button"
+                onClick={() => { setDateFrom(null); setDateTo(null) }}
+                className="text-xs text-gray-400 hover:text-gray-700 underline transition-colors">
+                Datum löschen
+              </button>
+            )}
+          </div>
         </div>
       )}
 
