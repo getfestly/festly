@@ -41,12 +41,7 @@ function LoginForm() {
         return
       }
 
-      if (!data.user?.email_confirmed_at) {
-        router.push('/auth/verify-email')
-        return
-      }
-
-      router.push('/')
+      router.push('/mein-bereich')
       trackEvent('user_logged_in', {})
       identifyUser(data.user.id, { email: data.user.email })
     } catch (err) {
