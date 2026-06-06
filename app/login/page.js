@@ -41,7 +41,7 @@ function LoginForm() {
         return
       }
 
-      router.push('/mein-bereich')
+      window.location.href = '/mein-bereich'
       trackEvent('user_logged_in', {})
       identifyUser(data.user.id, { email: data.user.email })
     } catch (err) {
