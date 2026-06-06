@@ -166,18 +166,6 @@ export default function SoFunktioniertPage() {
               <StepCard key={i} {...s} accent="#7C3AED" index={i} />
             ))}
           </div>
-
-          {/* Stripe-Hinweis */}
-          <div className="mt-2 rounded-2xl border border-violet-100 bg-violet-50 px-4 py-4 flex gap-3 items-start">
-            <span className="text-2xl shrink-0">💳</span>
-            <div>
-              <p className="text-sm font-semibold text-violet-900">Stripe Connect erforderlich</p>
-              <p className="text-xs text-violet-700 mt-0.5 leading-relaxed">
-                Für Auszahlungen ist ein kurzes Stripe-Onboarding nötig. Das dauert ca. 5 Minuten
-                und wird direkt nach dem Erstellen deines ersten Angebots geführt.
-              </p>
-            </div>
-          </div>
         </div>
 
       </section>
