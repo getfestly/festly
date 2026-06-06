@@ -10,22 +10,22 @@ const STEPS_CUSTOMER = [
   {
     icon: '🔍',
     title: 'Angebot finden & anfragen',
-    desc: 'Kategorie und Region wählen, Angebote vergleichen und direkt anfragen.',
+    desc: 'Kategorie und Region wählen, Angebote mit Fotos und Preisen vergleichen, direkt anfragen. Kein Telefonat nötig.',
   },
   {
     icon: '📅',
     title: 'Event-Details angeben',
-    desc: 'Datum, Personenanzahl und eine kurze Beschreibung deines Events mitteilen.',
+    desc: 'Datum, Ort, Personenanzahl und eine kurze Beschreibung. Der Anbieter weiß sofort was gefragt ist.',
   },
   {
     icon: '🔒',
     title: 'Sicher bezahlen',
-    desc: 'Deine Zahlung läuft über Festly (Treuhand) — kein Risiko, kein Vorauszahlungsrisiko.',
+    desc: 'Dein Geld liegt bei Festly, nicht beim Anbieter. Du zahlst nie in Vorkasse an jemanden den du nicht kennst.',
   },
   {
     icon: '🎉',
-    title: 'Event genießen & freigeben',
-    desc: 'Nach dem Event Zahlung manuell freigeben. Ohne Aktion erfolgt die Freigabe automatisch nach 7 Tagen.',
+    title: 'Event genießen',
+    desc: 'Alles gut gelaufen? Einmal bestätigen. Oder einfach nichts tun — nach 7 Tagen wird automatisch ausgezahlt.',
   },
 ]
 
@@ -40,22 +40,22 @@ const STEPS_PROVIDER = [
   {
     icon: '✨',
     title: 'Kostenlos inserieren',
-    desc: 'Angebot in wenigen Minuten erstellen, Fotos hochladen und sofort sichtbar sein.',
+    desc: 'Angebot in wenigen Minuten erstellen, Fotos hochladen, sofort sichtbar. Keine Monatsgebühr, keine Einrichtungskosten.',
   },
   {
     icon: '✅',
-    title: 'Anfragen selbst entscheiden',
-    desc: 'Jede Buchungsanfrage einzeln annehmen oder ablehnen — du behältst die Kontrolle.',
+    title: 'Du entscheidest',
+    desc: 'Jede Anfrage einzeln annehmen oder ablehnen. Volle Kontrolle über deinen Kalender.',
   },
   {
     icon: '🏦',
-    title: 'Geld sicher verwahrt',
-    desc: 'Festly hält die Kundenzahlung treuhänderisch bis nach dem Event.',
+    title: 'Keine Zahlungsausfälle',
+    desc: 'Festly stellt sicher dass die Zahlung vor dem Event gesichert ist. Du fährst hin und weißt: das Geld ist da.',
   },
   {
     icon: '💸',
-    title: 'Auszahlung erhalten',
-    desc: 'Nach Event-Bestätigung wird der Betrag abzüglich der Plattformgebühr ausgezahlt.',
+    title: 'Auszahlung nach dem Event',
+    desc: 'Direkt auf dein Konto. Du siehst bei jeder Buchung vorher genau was du bekommst.',
   },
 ]
 
@@ -96,10 +96,10 @@ export default function SoFunktioniertPage() {
               backgroundClip: 'text',
             }}
           >
-            So funktioniert Festly
+            Der sicherste Marktplatz für Eventdienstleistungen in Deutschland.
           </h1>
           <p className="text-lg text-gray-500 max-w-xl mx-auto leading-relaxed">
-            Der sichere Marktplatz für Eventdienstleistungen in Deutschland.
+            Dein Geld liegt bei uns — nicht beim Anbieter. Erst wenn dein Event geklappt hat, wird ausgezahlt.
           </p>
         </div>
       </section>
@@ -178,14 +178,14 @@ export default function SoFunktioniertPage() {
         >
           <h2 className="text-2xl font-extrabold mb-2">Bereit loszulegen?</h2>
           <p className="text-white/80 mb-8 text-sm leading-relaxed">
-            Finde das perfekte Angebot für dein nächstes Event oder werde selbst Anbieter.
+            Keine versteckten Gebühren. Kein Abo. Einfach loslegen.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/marktplatz"
               className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold px-6 py-3 rounded-2xl hover:bg-gray-100 transition-colors text-sm"
             >
-              🔍 Jetzt entdecken
+              🔍 Marktplatz entdecken
             </Link>
             <Link
               href="/register"
