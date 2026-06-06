@@ -97,10 +97,10 @@ export default function NavClient() {
         {/* ── Rechts: Auth ──────────────────────────────────────────────── */}
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            href="/anbieter/listings/neu"
+            href="/so-funktionierts"
             className="hidden md:block text-sm font-medium text-gray-700 hover:text-gray-900 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors whitespace-nowrap"
           >
-            Anbieter werden
+            So funktioniert&apos;s
           </Link>
 
           {/* Nicht eingeloggt */}
