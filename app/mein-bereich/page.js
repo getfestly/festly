@@ -95,18 +95,26 @@ export default function MeinBereichPage() {
   async function handleSaveProfile() {
     setFormSaving(true)
     setFormSaved(false)
-    await supabase.from('profiles')
-      .update({ display_name: draftName, location_address: draftAddress })
-      .eq('id', userId)
-    setProfile((p) => ({ ...p, display_name: draftName, location_address: draftAddress }))
-    setFormSaving(false)
-    setFormSaved(true)
-    setTimeout(() => setFormSaved(false), 2500)
+    try {
+      const { error } = await supabase.from('profiles')
+        .update({ display_name: draftName, location_address: draftAddress })
+        .eq('id', userId)
+      if (error) throw error
+      setProfile((p) => ({ ...p, display_name: draftName, location_address: draftAddress }))
+      setFormSaved(true)
+      setTimeout(() => setFormSaved(false), 2500)
+    } catch (err) {
+      console.error('[handleSaveProfile]', err)
+    } finally {
+      setFormSaving(false)
+    }
   }
 
   async function toggleListing(id, current) {
-    await supabase.from('listings').update({ is_active: !current }).eq('id', id)
-    setListings((ls) => ls.map((l) => l.id === id ? { ...l, is_active: !current } : l))
+    const { error } = await supabase.from('listings').update({ is_active: !current }).eq('id', id)
+    if (!error) {
+      setListings((ls) => ls.map((l) => l.id === id ? { ...l, is_active: !current } : l))
+    }
   }
 
   async function handleStripeOnboard() {

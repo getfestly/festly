@@ -108,7 +108,10 @@ export default function BearbeitenPage() {
 
   async function removeExistingPhoto(url) {
     const path = pathFromUrl(url)
-    if (path) await supabase.storage.from('listing-photos').remove([path])
+    if (path) {
+      const { error } = await supabase.storage.from('listing-photos').remove([path])
+      if (error) console.error('[removeExistingPhoto]', error)
+    }
     setForm((f) => ({ ...f, photos: f.photos.filter((u) => u !== url) }))
   }
 

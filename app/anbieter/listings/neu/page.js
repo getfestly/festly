@@ -159,7 +159,8 @@ export default function NeuesListingPage() {
         : Math.round(parseFloat(form.priceEuro) * 100)
 
       if (profile?.role === 'customer') {
-        await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
+        const { error: roleError } = await supabase.from('profiles').update({ role: 'provider' }).eq('id', user.id)
+        if (roleError) { setError('Profil konnte nicht aktualisiert werden.'); return }
       }
 
       const { error: insertError } = await supabase.from('listings').insert({

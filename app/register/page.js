@@ -30,7 +30,15 @@ export default function RegisterPage() {
         password: form.password,
       })
 
-      if (authError) { setError(authError.message); return }
+      if (authError) {
+        const msg = authError.message ?? ''
+        if (msg.includes('User already registered') || msg.includes('already been registered')) {
+          setError('Diese E-Mail-Adresse ist bereits registriert.')
+        } else {
+          setError('Registrierung fehlgeschlagen. Bitte versuche es erneut.')
+        }
+        return
+      }
 
       const user = data.user
       if (!user) { setError('Registrierung fehlgeschlagen.'); return }
@@ -47,7 +55,7 @@ export default function RegisterPage() {
           trackEvent('user_registered', { role: 'customer' })
           router.push('/auth/verify-email')
         } else {
-          setError(profileError.message)
+          setError('Profil konnte nicht erstellt werden. Bitte versuche es erneut.')
         }
         return
       }
@@ -58,7 +66,7 @@ export default function RegisterPage() {
       if (!data.session) {
         router.push('/auth/verify-email')
       } else {
-        router.push('/')
+        router.push('/mein-bereich')
       }
     } catch (err) {
       console.error('[Register] Fehler:', err)

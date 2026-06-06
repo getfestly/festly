@@ -289,19 +289,16 @@ export default function AnfragenPage() {
       const providerPlz = extractPlz(providerRegion)
       if (!providerPlz) {
         setTransportError('Anbieter-Standort nicht verfügbar — Fahrtkosten bitte direkt abstimmen.')
-        setTransportLoading(false)
         return
       }
       const [fromCoord, toCoord] = await Promise.all([geocode(providerPlz), geocode(plz)])
       if (!fromCoord || !toCoord) {
         setTransportError('PLZ nicht gefunden — Fahrtkosten bitte mit dem Anbieter abstimmen.')
-        setTransportLoading(false)
         return
       }
       const km = await getRouteKm(fromCoord, toCoord)
       if (km == null) {
         setTransportError('Route konnte nicht berechnet werden — Fahrtkosten bitte abstimmen.')
-        setTransportLoading(false)
         return
       }
       const vehicleType = VEHICLE_TYPES.find(v => v.id === listing.vehicle_type) ?? VEHICLE_TYPES[0]
@@ -311,8 +308,9 @@ export default function AnfragenPage() {
     } catch {
       setTransportError('Fahrtkosten konnten nicht berechnet werden.')
       setTransportCents(0)
+    } finally {
+      setTransportLoading(false)
     }
-    setTransportLoading(false)
   }
 
   async function handleSubmit(e) {

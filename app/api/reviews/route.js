@@ -6,7 +6,12 @@ export async function POST(request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Nicht eingeloggt' }, { status: 401 })
 
-  const { bookingId, rating, comment } = await request.json()
+  let bookingId, rating, comment
+  try {
+    ;({ bookingId, rating, comment } = await request.json())
+  } catch {
+    return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 })
+  }
 
   if (!bookingId || !rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: 'Ungültige Eingabe' }, { status: 400 })

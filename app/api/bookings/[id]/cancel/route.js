@@ -11,11 +11,12 @@ export async function POST(request, { params }) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 })
 
-  // Buchung laden — prüfen ob user beteiligt ist
+  // Buchung laden — Query selbst erzwingt Zugriffsprüfung (defense-in-depth neben RLS)
   const { data: booking } = await supabase
     .from('bookings')
     .select('id, status, event_date, amount_cents, customer_id, provider_id, listings(title)')
     .eq('id', bookingId)
+    .or(`customer_id.eq.${user.id},provider_id.eq.${user.id}`)
     .single()
 
   if (!booking) return NextResponse.json({ error: 'Buchung nicht gefunden.' }, { status: 404 })

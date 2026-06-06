@@ -131,43 +131,56 @@ export default function AnfragenPage() {
   }
 
   async function handleStatus(bookingId, newStatus) {
-    const res = await fetch(`/api/bookings/${bookingId}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    })
-    const data = await res.json()
-    if (!data.error) {
-      setProviderBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
-      const booking = providerBookings.find(b => b.id === bookingId)
-      if (newStatus === 'accepted') {
-        trackEvent('booking_accepted', { booking_id: bookingId, amount_cents: booking?.amount_cents })
-      } else if (newStatus === 'rejected') {
-        trackEvent('booking_rejected', { booking_id: bookingId })
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await res.json()
+      if (res.ok && !data.error) {
+        setProviderBookings((b) => b.map((x) => x.id === bookingId ? { ...x, status: newStatus } : x))
+        const booking = providerBookings.find(b => b.id === bookingId)
+        if (newStatus === 'accepted') {
+          trackEvent('booking_accepted', { booking_id: bookingId, amount_cents: booking?.amount_cents })
+        } else if (newStatus === 'rejected') {
+          trackEvent('booking_rejected', { booking_id: bookingId })
+        }
       }
+    } catch (err) {
+      console.error('[handleStatus]', err)
     }
   }
 
   async function handleCancel(bookingId) {
-    const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' })
-    const data = await res.json()
-    if (!data.error) {
-      setCustomerBookings((b) => b.map((x) => x.id === bookingId
-        ? { ...x, status: 'cancelled', cancellation_fee_cents: data.feeCents }
-        : x
-      ))
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && !data.error) {
+        setCustomerBookings((b) => b.map((x) => x.id === bookingId
+          ? { ...x, status: 'cancelled', cancellation_fee_cents: data.feeCents }
+          : x
+        ))
+      }
+    } catch (err) {
+      console.error('[handleCancel]', err)
+    } finally {
+      setConfirmCancel(null)
     }
-    setConfirmCancel(null)
   }
 
   async function handleComplete(bookingId) {
-    const res = await fetch(`/api/bookings/${bookingId}/complete`, { method: 'POST' })
-    const data = await res.json()
-    if (!data.error) {
-      setCustomerBookings((b) => b.map((x) => x.id === bookingId
-        ? { ...x, status: 'completed', updated_at: new Date().toISOString() }
-        : x
-      ))
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/complete`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && !data.error) {
+        setCustomerBookings((b) => b.map((x) => x.id === bookingId
+          ? { ...x, status: 'completed', updated_at: new Date().toISOString() }
+          : x
+        ))
+      }
+    } catch (err) {
+      console.error('[handleComplete]', err)
     }
   }
 
