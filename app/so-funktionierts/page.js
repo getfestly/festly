@@ -170,6 +170,53 @@ export default function SoFunktioniertPage() {
 
       </section>
 
+      {/* ── FAQ ────────────────────────────────────────────────────────────── */}
+      <section className="max-w-3xl mx-auto px-4 pb-16">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Häufige Fragen</h2>
+        <div className="flex flex-col gap-3">
+          {[
+            {
+              q: 'Was kostet Festly für Kunden?',
+              a: 'Nichts. Die Nutzung von Festly ist für Kunden vollständig kostenlos. Du bezahlst nur den vereinbarten Preis für die gebuchte Leistung.',
+            },
+            {
+              q: 'Was passiert wenn der Anbieter nicht erscheint oder absagt?',
+              a: 'Du bekommst dein Geld zurück. Da Festly die Zahlung treuhänderisch hält, kann kein Anbieter einfach mit deinem Geld verschwinden. Die Stornoregelung greift zu deinen Gunsten.',
+            },
+            {
+              q: 'Wie schnell bekomme ich als Anbieter mein Geld?',
+              a: 'Nach dem Event. Sobald der Kunde die Leistung bestätigt, wird die Auszahlung ausgelöst. Tut er das nicht, erfolgt die Freigabe automatisch nach 7 Tagen.',
+            },
+            {
+              q: 'Kann ich als Anbieter Anfragen ablehnen?',
+              a: 'Ja, jederzeit. Du entscheidest selbst welche Buchungen du annimmst. Keine Anfrage verpflichtet dich zu irgendetwas.',
+            },
+            {
+              q: 'Ist meine Zahlung wirklich sicher?',
+              a: 'Ja. Festly nutzt Stripe — einen der weltweit führenden Zahlungsanbieter. Deine Kartendaten werden niemals auf unseren Servern gespeichert.',
+            },
+          ].map(({ q, a }) => (
+            <details
+              key={q}
+              className="group bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden"
+            >
+              <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none select-none hover:bg-gray-50 transition-colors">
+                <span className="font-semibold text-gray-900 text-sm leading-snug">{q}</span>
+                <span
+                  className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold transition-transform group-open:rotate-45"
+                  style={{ background: 'linear-gradient(135deg, #C026A0, #7C3AED)' }}
+                >
+                  +
+                </span>
+              </summary>
+              <p className="px-5 pb-5 pt-1 text-sm text-gray-500 leading-relaxed border-t border-gray-50">
+                {a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* ── CTA ────────────────────────────────────────────────────────────── */}
       <section className="py-12 px-4">
         <div
