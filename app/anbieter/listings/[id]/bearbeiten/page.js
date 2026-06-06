@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { KATEGORIEN, KATEGORIEN_FLAT, VEHICLE_TYPES, REGION_NAMES } from '@/lib/constants'
+import { KATEGORIEN, KATEGORIEN_FLAT, VEHICLE_TYPES } from '@/lib/constants'
 import { PRICING_MODELS } from '@/lib/pricing'
 
 const MAX_PHOTOS = 10
@@ -58,6 +58,21 @@ function MicBtn({ onResult, className = '' }) {
       🎙️
     </button>
   )
+}
+
+async function lookupRegion(address) {
+  if (!address.trim()) return null
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&countrycode=de&format=json&addressdetails=1&limit=1`,
+      { headers: { 'User-Agent': 'Festly/1.0 (https://festly.de)' } }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data[0]?.address?.state ?? null
+  } catch {
+    return null
+  }
 }
 
 export default function BearbeitenPage() {
@@ -370,23 +385,15 @@ export default function BearbeitenPage() {
             </div>
           )}
 
-          {/* Region */}
-          <div className="border-t border-gray-100 pt-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Bundesland / Einsatzgebiet</label>
-            <select value={form.region} onChange={set('region')} className={inputCls}>
-              <option value="">— bitte wählen (optional) —</option>
-              {Object.values(REGION_NAMES).sort((a, b) => a.localeCompare(b, 'de')).map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-              <option value="deutschlandweit">Deutschlandweit</option>
-            </select>
-          </div>
-
           {/* Standort / Adresse */}
-          <div>
+          <div className="border-t border-gray-100 pt-5">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Standort / Adresse</label>
             <input
               type="text" value={form.location_address} onChange={set('location_address')}
+              onBlur={async (e) => {
+                const state = await lookupRegion(e.target.value)
+                setForm(f => ({ ...f, region: state }))
+              }}
               autoComplete="street-address"
               placeholder="z.B. Musterstraße 12, 30159 Hannover"
               className={inputCls}
