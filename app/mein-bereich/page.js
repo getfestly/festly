@@ -66,7 +66,7 @@ export default function MeinBereichPage() {
           p = coreProfile
         }
 
-        const [bookingsRes, listingsRes] = await Promise.all([
+        const [bookingsRes, listingsRes] = await Promise.allSettled([
           supabase.from('bookings')
             .select('id, status, event_date, amount_cents, listings(title)')
             .eq('customer_id', user.id)
@@ -81,8 +81,8 @@ export default function MeinBereichPage() {
         setProfile(p)
         setDraftName(p?.display_name ?? '')
         setDraftAddress(p?.location_address ?? '')
-        setCustomerBookings(bookingsRes.data ?? [])
-        setListings(listingsRes.data ?? [])
+        setCustomerBookings(bookingsRes.status === 'fulfilled' ? (bookingsRes.value.data ?? []) : [])
+        setListings(listingsRes.status === 'fulfilled' ? (listingsRes.value.data ?? []) : [])
       } catch (err) {
         console.error('[MeinBereich] Load-Fehler:', err)
       } finally {

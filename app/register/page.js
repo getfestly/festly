@@ -43,12 +43,12 @@ export default function RegisterPage() {
       const user = data.user
       if (!user) { setError('Registrierung fehlgeschlagen.'); return }
 
-      const { error: profileError } = await supabase.from('profiles').insert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: user.id,
         display_name: form.displayName,
         role: 'customer',
         accepted_terms_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'id', ignoreDuplicates: true })
 
       if (profileError) {
         if (!data.session) {

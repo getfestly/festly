@@ -62,7 +62,7 @@ export default function AnfragenPage() {
         if (!user) { router.replace('/login'); return }
         setUserId(user.id)
 
-        const [customerRes, providerRes, listingsRes] = await Promise.all([
+        const [customerRes, providerRes, listingsRes] = await Promise.allSettled([
           supabase.from('bookings').select(BOOKING_SELECT)
             .eq('customer_id', user.id).order('created_at', { ascending: false }),
           supabase.from('bookings').select(BOOKING_SELECT)
@@ -70,10 +70,10 @@ export default function AnfragenPage() {
           supabase.from('listings').select('id').eq('provider_id', user.id),
         ])
 
-        const cBookings = customerRes.data ?? []
+        const cBookings = customerRes.status === 'fulfilled' ? (customerRes.value.data ?? []) : []
         setCustomerBookings(cBookings)
-        setProviderBookings(providerRes.data ?? [])
-        setListingsCount(listingsRes.data?.length ?? 0)
+        setProviderBookings(providerRes.status === 'fulfilled' ? (providerRes.value.data ?? []) : [])
+        setListingsCount(listingsRes.status === 'fulfilled' ? (listingsRes.value.data?.length ?? 0) : 0)
 
         const completedIds = cBookings.filter(b => b.status === 'completed').map(b => b.id)
         if (completedIds.length > 0) {

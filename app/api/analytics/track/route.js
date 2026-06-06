@@ -8,11 +8,12 @@ export async function POST(request) {
 
     const supabaseServer = await createSupabaseServer()
     const { data: { user } } = await supabaseServer.auth.getUser()
+    if (!user) return Response.json({ ok: false }, { status: 401 })
 
     const admin = createAdminClient()
     await admin.from('events').insert({
       event_name,
-      user_id:    user?.id ?? null,
+      user_id:    user.id,
       session_id: session_id ?? null,
       properties: properties ?? {},
     })
