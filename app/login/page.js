@@ -27,7 +27,19 @@ function LoginForm() {
         password: form.password,
       })
 
-      if (authError) { setError(authError.message); return }
+      if (authError) {
+        const msg = authError.message ?? ''
+        if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
+          setError('E-Mail oder Passwort falsch.')
+        } else if (msg.includes('Too many requests') || msg.includes('over_request_rate_limit')) {
+          setError('Zu viele Versuche. Bitte warte kurz.')
+        } else if (msg.includes('Email not confirmed')) {
+          router.push('/auth/verify-email')
+        } else {
+          setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
+        }
+        return
+      }
 
       if (!data.user?.email_confirmed_at) {
         router.push('/auth/verify-email')
