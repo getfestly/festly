@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { validateNoContact } from '@/lib/contentFilter'
 
@@ -11,11 +12,82 @@ function formatTime(ts) {
   return `${d.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })} ${time}`
 }
 
-export default function BookingChat({ bookingId, currentUserId }) {
+function formatPrice(cents) {
+  return (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('de-DE', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+}
+
+const OFFER_STATUS = {
+  pending:  { label: 'Offen',       cls: 'bg-yellow-100 text-yellow-700' },
+  accepted: { label: 'Angenommen',  cls: 'bg-green-100 text-green-700'  },
+  declined: { label: 'Abgelehnt',   cls: 'bg-gray-100 text-gray-500'    },
+}
+
+function OfferBubble({ msg, currentUserId, currentUserRole, actionLoading, onAccept, onDecline }) {
+  const offer = msg.offer_data ?? {}
+  const statusCfg = OFFER_STATUS[offer.status] ?? OFFER_STATUS.pending
+  const isOwn = msg.sender_id === currentUserId
+  const isProcessing = actionLoading === msg.id
+
+  return (
+    <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+      <div className="max-w-[85%] bg-white border-l-4 border-orange-400 rounded-xl p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <p className="font-semibold text-gray-900 text-sm">{offer.title}</p>
+          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.cls}`}>
+            {statusCfg.label}
+          </span>
+        </div>
+        {offer.description && (
+          <p className="text-sm text-gray-600 mb-2">{offer.description}</p>
+        )}
+        <div className="flex gap-4 text-sm">
+          <span className="font-medium text-gray-900">{formatPrice(offer.price_cents)}</span>
+          <span className="text-gray-500">{offer.date ? formatDate(offer.date) : ''}</span>
+        </div>
+
+        {offer.status === 'pending' && currentUserRole === 'customer' && (
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => onAccept(msg)}
+              disabled={isProcessing}
+              className="flex-1 bg-green-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-green-700 disabled:opacity-40 transition-colors"
+            >
+              {isProcessing ? '…' : '✓ Annehmen'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDecline(msg)}
+              disabled={isProcessing}
+              className="flex-1 border border-gray-200 text-gray-500 rounded-lg py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40 transition-colors"
+            >
+              {isProcessing ? '…' : '✗ Ablehnen'}
+            </button>
+          </div>
+        )}
+      </div>
+      <span className="text-[10px] text-gray-400 mt-0.5 px-1">{formatTime(msg.created_at)}</span>
+    </div>
+  )
+}
+
+export default function BookingChat({ bookingId, currentUserId, currentUserRole }) {
+  const router = useRouter()
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [chatError, setChatError] = useState(null)
+  const [offerModal, setOfferModal] = useState(false)
+  const [offerForm, setOfferForm] = useState({ title: '', description: '', priceEuro: '', date: '' })
+  const [offerSending, setOfferSending] = useState(false)
+  const [offerError, setOfferError] = useState(null)
+  const [actionLoading, setActionLoading] = useState(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -24,7 +96,7 @@ export default function BookingChat({ bookingId, currentUserId }) {
     async function loadMessages() {
       const { data } = await supabase
         .from('messages')
-        .select('id, sender_id, content, created_at')
+        .select('id, sender_id, content, created_at, message_type, offer_data, offer_booking_id')
         .eq('booking_id', bookingId)
         .order('created_at', { ascending: true })
       if (active) setMessages(data ?? [])
@@ -43,6 +115,14 @@ export default function BookingChat({ bookingId, currentUserId }) {
           prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
         )
       })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `booking_id=eq.${bookingId}`,
+      }, (payload) => {
+        setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
+      })
       .subscribe()
 
     return () => {
@@ -51,7 +131,6 @@ export default function BookingChat({ bookingId, currentUserId }) {
     }
   }, [bookingId])
 
-  // Auto-Scroll bei neuen Nachrichten
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -59,36 +138,122 @@ export default function BookingChat({ bookingId, currentUserId }) {
   async function sendMessage() {
     const trimmed = text.trim()
     if (!trimmed || sending) return
-
     const contactErr = validateNoContact(trimmed)
-    if (contactErr) {
-      setChatError(contactErr)
-      return
-    }
+    if (contactErr) { setChatError(contactErr); return }
     setChatError(null)
     setSending(true)
 
-    const { data: newMsg, error } = await supabase
-      .from('messages')
-      .insert({ booking_id: bookingId, sender_id: currentUserId, content: trimmed })
-      .select('id, sender_id, content, created_at')
-      .single()
+    try {
+      const { data: newMsg, error } = await supabase
+        .from('messages')
+        .insert({
+          booking_id:   bookingId,
+          sender_id:    currentUserId,
+          content:      trimmed,
+          message_type: 'text',
+        })
+        .select('id, sender_id, content, created_at, message_type, offer_data, offer_booking_id')
+        .single()
 
-    setSending(false)
-    if (error) {
-      setChatError(error.message)
-    } else if (newMsg) {
-      // Optimistisch hinzufügen; Realtime-Event wird dedupliziert
-      setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
-      setText('')
+      if (error) {
+        setChatError(error.message)
+      } else if (newMsg) {
+        setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
+        setText('')
+      }
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function sendOffer() {
+    const { title, description, priceEuro, date } = offerForm
+    if (!title.trim() || !priceEuro || !date) {
+      setOfferError('Bitte alle Pflichtfelder ausfüllen.')
+      return
+    }
+    const price_cents = Math.round(parseFloat(priceEuro) * 100)
+    if (isNaN(price_cents) || price_cents <= 0) {
+      setOfferError('Ungültiger Preis.')
+      return
+    }
+    setOfferSending(true)
+    setOfferError(null)
+
+    try {
+      const { data: newMsg, error } = await supabase
+        .from('messages')
+        .insert({
+          booking_id:   bookingId,
+          sender_id:    currentUserId,
+          content:      'Ich habe dir ein Angebot geschickt.',
+          message_type: 'offer',
+          offer_data: {
+            title:       title.trim(),
+            description: description.trim() || null,
+            price_cents,
+            date,
+            status:      'pending',
+          },
+        })
+        .select('id, sender_id, content, created_at, message_type, offer_data, offer_booking_id')
+        .single()
+
+      if (error) {
+        setOfferError(error.message)
+      } else if (newMsg) {
+        setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
+        setOfferModal(false)
+        setOfferForm({ title: '', description: '', priceEuro: '', date: '' })
+      }
+    } finally {
+      setOfferSending(false)
+    }
+  }
+
+  async function handleAccept(msg) {
+    setActionLoading(msg.id)
+    try {
+      const res = await fetch('/api/bookings/from-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: msg.id, bookingId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setChatError(data.error ?? 'Fehler beim Annehmen des Angebots.')
+        return
+      }
+      router.push(`/buchungen/${data.bookingId}/bezahlen`)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleDecline(msg) {
+    setActionLoading(msg.id)
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ offer_data: { ...msg.offer_data, status: 'declined' } })
+        .eq('id', msg.id)
+      if (error) {
+        setChatError(error.message)
+        return
+      }
+      setMessages(prev =>
+        prev.map(m => m.id === msg.id
+          ? { ...m, offer_data: { ...m.offer_data, status: 'declined' } }
+          : m
+        )
+      )
+    } finally {
+      setActionLoading(null)
     }
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
   return (
@@ -110,6 +275,19 @@ export default function BookingChat({ bookingId, currentUserId }) {
           </p>
         )}
         {messages.map((msg) => {
+          if (msg.message_type === 'offer') {
+            return (
+              <OfferBubble
+                key={msg.id}
+                msg={msg}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                actionLoading={actionLoading}
+                onAccept={handleAccept}
+                onDecline={handleDecline}
+              />
+            )
+          }
           const isOwn = msg.sender_id === currentUserId
           return (
             <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
@@ -154,6 +332,15 @@ export default function BookingChat({ bookingId, currentUserId }) {
               </span>
             )}
           </div>
+          {currentUserRole === 'provider' && (
+            <button
+              type="button"
+              onClick={() => { setOfferModal(true); setOfferError(null) }}
+              className="px-3 py-2.5 text-sm font-medium border border-orange-300 text-orange-600 rounded-xl hover:bg-orange-50 transition-colors shrink-0"
+            >
+              ＋ Angebot
+            </button>
+          )}
           <button
             type="button"
             onClick={sendMessage}
@@ -164,6 +351,78 @@ export default function BookingChat({ bookingId, currentUserId }) {
           </button>
         </div>
       </div>
+
+      {/* Angebot-Modal */}
+      {offerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Angebot erstellen</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Titel *</label>
+                <input
+                  type="text"
+                  value={offerForm.title}
+                  onChange={(e) => setOfferForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="z.B. Hochzeitspaket Deluxe"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Beschreibung</label>
+                <textarea
+                  rows={2}
+                  value={offerForm.description}
+                  onChange={(e) => setOfferForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none"
+                  placeholder="Optional …"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Preis (€) *</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={offerForm.priceEuro}
+                  onChange={(e) => setOfferForm(f => ({ ...f, priceEuro: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Datum *</label>
+                <input
+                  type="date"
+                  value={offerForm.date}
+                  onChange={(e) => setOfferForm(f => ({ ...f, date: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+                />
+              </div>
+            </div>
+            {offerError && (
+              <p className="text-red-500 text-xs mt-3">{offerError}</p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setOfferModal(false)}
+                className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={sendOffer}
+                disabled={offerSending}
+                className="flex-1 btn-primary py-2 text-sm font-medium disabled:opacity-40"
+              >
+                {offerSending ? '…' : 'Angebot senden'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

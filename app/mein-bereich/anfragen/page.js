@@ -474,7 +474,11 @@ export default function AnfragenPage() {
                   </div>
 
                   {openChatId === booking.id && (
-                    <BookingChat bookingId={booking.id} currentUserId={userId} />
+                    <BookingChat
+                      bookingId={booking.id}
+                      currentUserId={userId}
+                      currentUserRole={isProviderView ? 'provider' : 'customer'}
+                    />
                   )}
                 </div>
               )
